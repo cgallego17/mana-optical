@@ -1,0 +1,14 @@
+{
+  "name": "optica-mana",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"cd backend && python manage.py runserver\" \"cd web && npm run dev\"",
+    "backend": "cd backend && python manage.py runserver",
+    "frontend": "cd web && npm run dev",
+    "build": "cd web && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
