@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 DOMAIN_ROOT="opticamana.com"
 BASE_DIR="/var/www/mana"
 BACKEND_DIR="$BASE_DIR/backend"
@@ -33,19 +35,19 @@ python3 -m venv "$VENV_DIR"
 
 # Nginx site
 install -d /etc/nginx/sites-available /etc/nginx/sites-enabled
-cp -f "$BACKEND_DIR/../deploy/nginx.http.conf" /etc/nginx/sites-available/mana
+cp -f "$SCRIPT_DIR/nginx.http.conf" /etc/nginx/sites-available/mana
 ln -sf /etc/nginx/sites-available/mana /etc/nginx/sites-enabled/mana
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
 # systemd service
-cp -f "$BACKEND_DIR/../deploy/mana-backend.service" /etc/systemd/system/mana-backend.service
+cp -f "$SCRIPT_DIR/mana-backend.service" /etc/systemd/system/mana-backend.service
 systemctl daemon-reload
 systemctl enable --now mana-backend
 
 echo "\nRunning smoke test..."
-bash "$BACKEND_DIR/../deploy/do_smoke_test.sh"
+bash "$SCRIPT_DIR/do_smoke_test.sh"
 
 echo "\nDeployed." 
 echo "- http://$DOMAIN_ROOT/" 
