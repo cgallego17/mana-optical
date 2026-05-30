@@ -12,7 +12,9 @@ const { open: openAgenda } = useAgendaModal()
       <h1 class="text-4xl lg:text-5xl font-black text-white uppercase tracking-tight mb-3" style="font-family:'Playfair Display',serif;">
         Reserva tu Cita
       </h1>
-      <p class="text-white/60 text-sm max-w-2xl mx-auto text-center">Selecciona el tipo de servicio y el horario disponible. Confirmación inmediata por WhatsApp.</p>
+      <div class="flex justify-center px-4">
+        <p class="text-white/60 text-sm text-center max-w-sm">Selecciona el tipo de servicio y el horario disponible. Confirmación inmediata por WhatsApp.</p>
+      </div>
     </section>
 
     <section class="bg-white">

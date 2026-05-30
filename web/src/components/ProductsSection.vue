@@ -1,12 +1,70 @@
 <script setup lang="ts">
-const products = [
-  { id: 1, name: 'Lennons Metálicos', category: 'Ojo de Gato / Lujo', price: 175.00, originalPrice: 199.00, sale: true, image: 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=700&q=80' },
-  { id: 2, name: 'Gafas Cat Eye', category: 'Ojo de Gato / Lujo', price: 199.00, originalPrice: null, sale: false, image: 'https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=700&q=80' },
-  { id: 3, name: 'Gafas Diseñadas', category: 'Aviador / Lujo', price: 211.00, originalPrice: null, sale: false, image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=700&q=80' },
-  { id: 4, name: 'Ovaladas Carey', category: 'Oval / Vintage', price: 189.00, originalPrice: null, sale: false, image: 'https://images.unsplash.com/photo-1582142306909-195724d33ffc?auto=format&fit=crop&w=700&q=80' },
-  { id: 5, name: 'Montura Delgada', category: 'Sin Aro / Minimal', price: 165.00, originalPrice: null, sale: false, image: 'https://images.unsplash.com/photo-1509695507497-903c140c43b0?auto=format&fit=crop&w=700&q=80' },
-  { id: 6, name: 'Redondas Clip-On', category: 'Redondas / Clásico', price: 225.00, originalPrice: null, sale: false, image: 'https://images.unsplash.com/photo-1473496169904-658ba7574b0d?auto=format&fit=crop&w=700&q=80' },
-]
+import { ref, onMounted } from 'vue'
+
+import { apiFetch } from '../lib/api'
+
+type ProductoApi = {
+  id: number
+  nombre: string
+  slug: string
+  descripcion: string
+  precio: string
+  precio_antes: string | null
+  imagen_url: string
+  categoria: { id: number; nombre: string; slug: string } | null
+}
+
+type PaginatedResponse<T> = {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
+type ProductCard = {
+  id: number
+  name: string
+  category: string
+  price: number
+  originalPrice: number | null
+  sale: boolean
+  image: string
+  slug: string
+}
+
+const products = ref<ProductCard[]>([])
+const cargando = ref(false)
+
+function mapProduct(p: ProductoApi): ProductCard {
+  const price = Number(p.precio)
+  const originalPrice = p.precio_antes ? Number(p.precio_antes) : null
+  return {
+    id: p.id,
+    name: p.nombre,
+    category: p.categoria?.nombre ?? 'Sin categoría',
+    price,
+    originalPrice,
+    sale: Boolean(originalPrice && originalPrice > price),
+    image: p.imagen_url || 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=700&q=80',
+    slug: p.slug,
+  }
+}
+
+async function cargar() {
+  cargando.value = true
+  try {
+    const data = await apiFetch<PaginatedResponse<ProductoApi>>('/catalogo/productos/?page=1&page_size=6')
+    products.value = data.results.map(mapProduct)
+  } catch {
+    products.value = []
+  } finally {
+    cargando.value = false
+  }
+}
+
+onMounted(() => {
+  cargar()
+})
 </script>
 
 <template>
@@ -20,7 +78,10 @@ const products = [
     </div>
 
     <!-- Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14 max-w-6xl mx-auto">
+    <div v-if="cargando" class="py-10 text-center text-[11px] text-black/40">
+      Cargando...
+    </div>
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14 max-w-6xl mx-auto">
       <div
         v-for="(product, i) in products"
         :key="product.id"
@@ -58,9 +119,9 @@ const products = [
           <h3 class="text-sm font-bold tracking-wide uppercase text-black mb-3">{{ product.name }}</h3>
           <div class="flex items-center justify-center gap-3">
             <span v-if="product.originalPrice" class="text-sm line-through text-black/25">
-              ${{ product.originalPrice.toFixed(2) }}
+              ${{ product.originalPrice.toLocaleString('es-CO') }}
             </span>
-            <span class="text-base font-black text-black">${{ product.price.toFixed(2) }}</span>
+            <span class="text-base font-black text-black">${{ product.price.toLocaleString('es-CO') }}</span>
           </div>
         </div>
       </div>

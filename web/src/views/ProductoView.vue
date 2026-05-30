@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { ShoppingCart, Heart, ChevronLeft, ChevronRight, MessageCircle, Tag, ArrowLeft } from 'lucide-vue-next'
 import { useAgendaModal } from '../composables/agendaModal'
+import { useSeo, removeJsonLd } from '../composables/seo'
 import { apiFetch } from '../lib/api'
 
 const route = useRoute()
 const { open: openAgenda } = useAgendaModal()
+const { setPage, setProduct, setBreadcrumb } = useSeo()
 
 type ProductoDetailApi = {
   id: number
@@ -92,6 +94,25 @@ async function cargarProducto(slug: string) {
     const data = await apiFetch<ProductoDetailApi>(`/catalogo/productos/${slug}/`)
     producto.value = mapProductoDetail(data)
 
+    // SEO: título, OG, JSON-LD
+    const p = producto.value
+    setPage({
+      title: `${p.nombre} | Maná Óptical`,
+      description: p.descripcion.slice(0, 160),
+      image: p.imagen,
+      type: 'product',
+    })
+    setProduct({
+      nombre: p.nombre, descripcion: p.descripcion, imagen: p.imagen,
+      precio: p.precio, precioAnterior: p.precioAnterior,
+      marca: p.marca, slug: p.slug,
+    })
+    setBreadcrumb([
+      { name: 'Inicio', url: `${window.location.origin}/` },
+      { name: 'Tienda', url: `${window.location.origin}/tienda` },
+      { name: p.nombre, url: window.location.href },
+    ])
+
     if (producto.value.categoriaSlug) {
       const rel = await apiFetch<ProductoListApi[]>(
         `/catalogo/productos/?categoria=${encodeURIComponent(producto.value.categoriaSlug)}`,
@@ -123,6 +144,7 @@ onMounted(() => {
   const slug = route.params.slug
   if (typeof slug === 'string' && slug) cargarProducto(slug)
 })
+onUnmounted(() => { removeJsonLd('ld-product'); removeJsonLd('ld-breadcrumb') })
 
 function waLink(nombre: string) {
   const msg = encodeURIComponent(`Hola, me interesa el producto *${nombre}*. ¿Podrían darme más información?`)
@@ -205,7 +227,7 @@ function waLink(nombre: string) {
                 class="h-16 w-16 bg-[#f8f7f5] flex items-center justify-center p-2 border-2 transition"
                 :class="imagenActiva === i ? 'border-[#314037]' : 'border-transparent hover:border-black/20'"
               >
-                <img :src="img" :alt="`Vista ${i+1}`" class="h-full w-full object-contain" />
+                <img :src="img" :alt="`Vista ${i+1}`" class="h-full w-full object-contain" loading="lazy" />
               </button>
             </div>
           </div>
@@ -310,7 +332,7 @@ function waLink(nombre: string) {
             <div v-for="rel in relacionados" :key="rel.id" class="group">
               <RouterLink :to="`/producto/${rel.slug}`" class="block bg-white overflow-hidden mb-3">
                 <div class="h-40 sm:h-48 flex items-center justify-center p-5">
-                  <img :src="rel.imagen" :alt="rel.nombre"
+                  <img :src="rel.imagen" :alt="rel.nombre" loading="lazy"
                     class="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105" />
                 </div>
               </RouterLink>

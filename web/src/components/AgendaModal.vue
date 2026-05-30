@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { X, ChevronLeft, ChevronRight, Check, Calendar, Clock, User, MessageCircle } from 'lucide-vue-next'
 import { useAgendaModal } from '../composables/agendaModal'
-import { apiFetch } from '../lib/api'
+import { apiFetch, unwrapResults } from '../lib/api'
 
 const { isOpen, close } = useAgendaModal()
 
@@ -114,7 +114,8 @@ async function cargarServicios() {
   cargandoServicios.value = true
   errorMsg.value = ''
   try {
-    servicios.value = await apiFetch<ServicioApi[]>('/agenda/servicios/')
+    const data = await apiFetch<ServicioApi[] | { results: ServicioApi[] }>('/agenda/servicios/')
+    servicios.value = unwrapResults<ServicioApi>(data)
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : 'Error cargando servicios'
   } finally {

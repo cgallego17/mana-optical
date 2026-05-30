@@ -19,9 +19,11 @@ const valores = [
       <h1 class="text-4xl lg:text-5xl font-black text-white uppercase tracking-tight mb-3" style="font-family:'Playfair Display',serif;">
         Maná Óptical
       </h1>
-      <p class="text-white/50 text-sm max-w-lg mx-auto leading-relaxed text-center">
-        Especialistas en salud visual y óptica de diseño en Betania, Antioquia.
-      </p>
+      <div class="flex justify-center px-4">
+        <p class="text-white/50 text-sm text-center max-w-sm leading-relaxed">
+          Especialistas en salud visual y óptica de diseño en Betania, Antioquia.
+        </p>
+      </div>
     </div>
 
     <!-- Historia -->

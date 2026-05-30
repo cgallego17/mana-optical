@@ -9,7 +9,9 @@ import ServicesSection from '../components/ServicesSection.vue'
       <h1 class="text-4xl lg:text-5xl font-black text-white uppercase tracking-tight mb-3" style="font-family:'Playfair Display',serif;">
         Servicios
       </h1>
-      <p class="text-white/60 text-sm max-w-2xl mx-auto text-center">Exámenes visuales, monturas premium, lentes oftálmicos y más. Calidad clínica con estética de lujo.</p>
+      <div class="flex justify-center px-4">
+        <p class="text-white/60 text-sm text-center max-w-sm">Exámenes visuales, monturas premium, lentes oftálmicos y más. Calidad clínica con estética de lujo.</p>
+      </div>
     </section>
 
     <section class="bg-white">

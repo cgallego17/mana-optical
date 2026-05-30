@@ -1,0 +1,42 @@
+{
+  "name": "Maná Óptical",
+  "short_name": "Maná",
+  "description": "Óptica premium: exámenes visuales, monturas y asesoría.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#314037",
+  "lang": "es",
+  "categories": ["health", "shopping"],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tienda",
+      "url": "/tienda",
+      "description": "Ver catálogo de monturas y lentes"
+    },
+    {
+      "name": "Reservar cita",
+      "url": "/agenda",
+      "description": "Agenda tu examen visual"
+    },
+    {
+      "name": "Blog",
+      "url": "/blog",
+      "description": "Consejos de salud visual"
+    }
+  ]
+}

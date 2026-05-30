@@ -1,41 +1,58 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { CheckCircle2, XCircle, ArrowRight } from 'lucide-vue-next'
 import { useAgendaModal } from '../composables/agendaModal'
 
+import { apiFetch, unwrapResults } from '../lib/api'
+
 const { open: openAgenda } = useAgendaModal()
 
-const services = [
-  {
+type ServicioApi = {
+  id: number
+  nombre: string
+  slug: string
+  duracion_minutos: number
+}
+
+type ServiceCard = {
+  image: string
+  tag: string
+  title: string
+  features: Array<{ text: string; ok: boolean }>
+}
+
+const services = ref<ServiceCard[]>([])
+const cargando = ref(false)
+
+function mapServicio(s: ServicioApi): ServiceCard {
+  return {
     image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=700&q=80',
-    tag: 'Salud Visual',
-    title: 'Examen Visual Completo',
+    tag: 'Agenda',
+    title: s.nombre,
     features: [
-      { text: 'Evaluación de agudeza visual y refracción', ok: true },
-      { text: 'Revisión de presión intraocular', ok: true },
-      { text: 'Diagnóstico de enfermedades oculares', ok: false },
+      { text: `Duración: ${s.duracion_minutos} min`, ok: true },
+      { text: 'Reserva online en segundos', ok: true },
+      { text: 'Confirmación por WhatsApp', ok: true },
     ],
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1617471346061-5d329ab9c574?auto=format&fit=crop&w=700&q=80',
-    tag: 'Online',
-    title: 'Agenda tu Examen',
-    features: [
-      { text: 'Reserva desde cualquier dispositivo', ok: true },
-      { text: 'Confirmación inmediata por correo', ok: true },
-      { text: 'Recordatorio automático de tu cita', ok: true },
-    ],
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1551190822-a9333d879b1f?auto=format&fit=crop&w=700&q=80',
-    tag: 'Premium',
-    title: 'Tratamientos Médicos',
-    features: [
-      { text: 'Especialistas certificados', ok: true },
-      { text: 'Tecnología de diagnóstico avanzada', ok: true },
-      { text: 'Seguimiento personalizado', ok: false },
-    ],
-  },
-]
+  }
+}
+
+async function cargar() {
+  cargando.value = true
+  try {
+    const data = await apiFetch<ServicioApi[] | { results: ServicioApi[] }>('/agenda/servicios/')
+    const lista = unwrapResults<ServicioApi>(data)
+    services.value = lista.slice(0, 3).map(mapServicio)
+  } catch {
+    services.value = []
+  } finally {
+    cargando.value = false
+  }
+}
+
+onMounted(() => {
+  cargar()
+})
 </script>
 
 <template>
@@ -47,11 +64,16 @@ const services = [
       <h2 class="text-4xl lg:text-5xl font-black tracking-tight text-black uppercase mb-4">
         Agenda una Cita
       </h2>
-      <p class="text-sm text-black/40">Reserva tu turno con nuestros especialistas de forma rápida y sencilla</p>
+      <div class="flex justify-center px-4">
+        <p class="text-sm text-black/40 text-center max-w-sm">Reserva tu turno con nuestros especialistas de forma rápida y sencilla</p>
+      </div>
     </div>
 
     <!-- Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+    <div v-if="cargando" class="py-10 text-center text-[11px] text-black/40">
+      Cargando...
+    </div>
+    <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
       <div
         v-for="(service, i) in services"
         :key="service.title"
@@ -60,7 +82,7 @@ const services = [
       >
         <!-- Image -->
         <div class="relative overflow-hidden h-52">
-          <img :src="service.image" :alt="service.title"
+          <img :src="service.image" :alt="service.title" loading="lazy"
             class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
           <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           <span class="absolute top-4 left-4 bg-[#f5d984] text-[#314037] text-[10px] font-bold tracking-widest uppercase px-3 py-1">

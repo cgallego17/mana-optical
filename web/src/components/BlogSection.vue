@@ -1,9 +1,57 @@
 <script setup lang="ts">
-const posts = [
-  { image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=700&q=80', date: '30 Jul 2025', tag: 'Estilo', title: 'Gafas para Hombre de Moda', excerpt: 'Descubre las tendencias más actuales en monturas masculinas para esta temporada y cómo lucir con estilo.' },
-  { image: 'https://images.unsplash.com/photo-1577744486770-020ab432da65?auto=format&fit=crop&w=700&q=80', date: '22 Jul 2025', tag: 'Visión', title: 'Monturas que te Favorecen', excerpt: 'Te ayudamos a encontrar la montura perfecta según la forma de tu rostro con nuestra guía completa.' },
-  { image: 'https://images.unsplash.com/photo-1508615039623-a25605d2b022?auto=format&fit=crop&w=700&q=80', date: '15 Jul 2025', tag: 'Diseño', title: 'Personaliza tus Gafas', excerpt: 'Crea unas gafas únicas a tu medida con nuestro servicio de personalización premium.' },
-]
+import { ref, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
+
+import { apiFetch, unwrapResults } from '../lib/api'
+
+type CategoriaApi = { id: number; nombre: string; slug: string }
+type PostApi = {
+  id: number
+  titulo: string
+  slug: string
+  extracto: string
+  imagen_url: string
+  publicado_en: string | null
+  creado_en: string
+  categoria: CategoriaApi | null
+}
+
+const posts = ref<Array<{ image: string; date: string; tag: string; title: string; excerpt: string; slug: string }>>([])
+const cargando = ref(false)
+
+function formatFecha(iso: string | null, fallbackIso: string): string {
+  const raw = iso || fallbackIso
+  try {
+    const d = new Date(raw)
+    return d.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: '2-digit' })
+  } catch {
+    return raw
+  }
+}
+
+async function cargar() {
+  cargando.value = true
+  try {
+    const data = await apiFetch<PostApi[] | { results: PostApi[] }>('/blog/posts/')
+    const lista = unwrapResults<PostApi>(data)
+    posts.value = lista.slice(0, 3).map(p => ({
+      image: p.imagen_url || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=700&q=80',
+      date: formatFecha(p.publicado_en, p.creado_en),
+      tag: p.categoria?.nombre ?? 'General',
+      title: p.titulo,
+      excerpt: p.extracto || '',
+      slug: p.slug,
+    }))
+  } catch {
+    posts.value = []
+  } finally {
+    cargando.value = false
+  }
+}
+
+onMounted(() => {
+  cargar()
+})
 </script>
 
 <template>
@@ -17,10 +65,14 @@ const posts = [
     </div>
 
     <!-- Posts -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-      <article
+    <div v-if="cargando" class="py-10 text-center text-[11px] text-black/40">
+      Cargando...
+    </div>
+    <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      <RouterLink
         v-for="(post, i) in posts"
         :key="post.title"
+        :to="{ name: 'blog-post', params: { slug: post.slug } }"
         v-scroll-reveal="{ delay: i * 160 }"
         class="group bg-white overflow-hidden hover:shadow-xl transition-shadow duration-500 cursor-pointer flex flex-col"
       >
@@ -42,12 +94,12 @@ const posts = [
           </h3>
           <p class="text-xs text-black/50 leading-relaxed mb-6 flex-1">{{ post.excerpt }}</p>
 
-          <a href="#" class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-black hover:text-[#f5d984] transition-colors duration-300">
+          <span class="inline-flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-black hover:text-[#f5d984] transition-colors duration-300">
             Leer Más
             <span class="block w-5 h-px bg-current group-hover:w-8 transition-all duration-300" />
-          </a>
+          </span>
         </div>
-      </article>
+      </RouterLink>
     </div>
 
   </section>

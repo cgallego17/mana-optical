@@ -11,7 +11,9 @@ import { Mail, Phone, MapPin, Clock, Send, Instagram, Facebook, Twitter } from '
       <h1 class="relative text-4xl lg:text-5xl font-black text-white uppercase tracking-tight mb-3" style="font-family:'Playfair Display',serif;">
         Contacto
       </h1>
-      <p class="relative text-white/70 text-sm max-w-2xl mx-auto text-center">Escríbenos, llámanos o visítanos. Respuesta rápida y atención cercana.</p>
+      <div class="relative flex justify-center px-4">
+        <p class="text-white/70 text-sm text-center max-w-sm">Escríbenos, llámanos o visítanos. Respuesta rápida y atención cercana.</p>
+      </div>
     </section>
 
     <!-- Content -->

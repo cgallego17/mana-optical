@@ -61,21 +61,25 @@ Aceptación:
   - [x] ~~Catálogo: `/api/catalogo/productos/` y `/api/catalogo/productos/<slug>/`~~
   - [x] ~~Agenda: `/api/agenda/disponibilidad/?fecha=YYYY-MM-DD` y `POST /api/agenda/reservas/`~~
   - [x] ~~Búsqueda unificada: `/api/busqueda/?q=...`~~
-  - [ ] Blog + contenido Home (pendiente)
+  - [x] ~~Blog + contenido Home~~
 - [x] ~~Seeds/datos ejemplo y admin de Django como respaldo técnico.~~
 
 ## Fase 5 — Panel de administración SPA
-- [ ] Login (JWT), roles (admin/colaborador) y protección de rutas.
-- [ ] Dashboard con KPIs (citas, ventas, productos más vistos, etc.).
-- [ ] CRUD: catálogo (productos/categorías/marcas), contenido (hero, testimonios, banners), blog, galería, citas/agenda.
-- [ ] UI alineada al diseño premium (dorado/verde, glass, tipografía, tablas con filtros y formularios validados).
+- [x] ~~Login (JWT) y protección de rutas admin con guard en router (beforeEach con matched.some).~~
+- [x] ~~Dashboard con KPIs: total productos, posts publicados, reservas totales y pendientes.~~
+- [x] ~~CRUD Catálogo: productos (tabla + panel lateral), categorías y marcas (edición inline).~~
+- [x] ~~CRUD Blog: lista de posts + editor (título, slug, categoría, extracto, contenido HTML, publicado).~~
+- [x] ~~Agenda: tabla de reservas con filtro por estado y cambio de estado (confirmar/cancelar); CRUD de servicios.~~
+- [x] ~~Sidebar de navegación con sub-rutas (/admin/dashboard, /admin/productos, /admin/blog, etc.), responsive (hamburger móvil).~~
 
 ## Fase 6 — SEO avanzado, URLs y PWA
-- [ ] Metadatos dinámicos por ruta (título/descr), canónicas, OG/Twitter, breadcrumbs.
-- [ ] URLs con slugs legibles: `/producto/:slug`, `/categoria/:slug`, `/blog/:slug`.
-- [ ] Sitemap.xml, robots.txt, JSON-LD (Product, Organization, BreadcrumbList, BlogPosting).
-- [ ] Optimización de imágenes, code-splitting/prefetch, Lighthouse SEO/Perf > 90.
-- [ ] Manifest y Service Worker (PWA) básico.
+- [x] ~~Metadatos dinámicos por ruta: `<title>`, `<meta description>`, canonical, OG/Twitter en `router.afterEach`. Composable `useSeo` reutilizable.~~
+- [x] ~~URLs con slugs legibles: `/producto/:slug` ✅, `/categoria/:slug` ✅ (vista filtrada por categoría), `/blog/:slug` ✅.~~
+- [x] ~~JSON-LD: `Organization/LocalBusiness` (global en App), `Product` + `BreadcrumbList` (ProductoView), `BlogPosting` + `BreadcrumbList` (BlogPostView).~~
+- [x] ~~`sitemap.xml` con 8 rutas y prioridades, `robots.txt` con Disallow para `/admin/` y `/api/`.~~
+- [x] ~~Lazy loading (`loading="lazy"`) en imágenes de TiendaView, ProductoView, CategoriaView, BlogView, BlogPostView, BookingSection.~~
+- [x] ~~PWA: `manifest.webmanifest` con shortcuts (Tienda, Agenda, Blog), Service Worker con cache-first para assets y network-first para navegación.~~
+- [ ] Lighthouse SEO/Perf > 90 (requiere deploy en producción con HTTPS para medir con precisión).
 
 ---
 
@@ -93,7 +97,10 @@ Aceptación:
 - ✅ Tienda premium: sidebar filtros, quick view modal, grid responsivo.
 - ✅ Ficha de producto `/producto/:slug` con galería, precios, relacionados.
 - ✅ Agenda modal: 4 pasos, calendario, horarios, WhatsApp deep link.
-- 🕒 Pendientes: blog/contenido Home, clientes, admin SPA, SEO avanzado.
+- ✅ Admin SPA completo: sidebar, dashboard KPIs, CRUDs de catálogo, blog y agenda.
+- ✅ SEO completo: OG/Twitter, JSON-LD, canonical, sitemap, robots.txt, lazy loading, PWA.
+- ✅ Ruta `/categoria/:slug` con vista filtrada y breadcrumb.
+- 🕒 Pendiente: deploy en producción + Lighthouse audit real.
 
 ## Próximo paso sugerido
 1) Implementar `Clientes` (modelo + endpoints) si aplica.

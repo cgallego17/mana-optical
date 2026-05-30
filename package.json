@@ -3,10 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently \"cd backend && python manage.py runserver\" \"cd web && npm run dev\"",
-    "backend": "cd backend && python manage.py runserver",
-    "frontend": "cd web && npm run dev",
-    "build": "cd web && npm run build"
+    "start":   "npm --prefix web run build && python backend/manage.py runserver 127.0.0.1:8000",
+    "dev":     "concurrently \"python backend/manage.py runserver\" \"npm --prefix web run dev\"",
+    "build":   "npm --prefix web run build",
+    "backend": "python backend/manage.py runserver 127.0.0.1:8000",
+    "frontend": "npm --prefix web run dev"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"

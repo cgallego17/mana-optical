@@ -1,8 +1,29 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { ChevronRight, ChevronLeft, ArrowDown } from 'lucide-vue-next'
 import { useAgendaModal } from '../composables/agendaModal'
 
+import { apiFetch } from '../lib/api'
+
 const { open: openAgenda } = useAgendaModal()
+
+type HomeContentApi = {
+  hero_titulo: string
+  hero_subtitulo: string
+  hero_cta_texto: string
+  hero_cta_href: string
+  actualizado_en: string
+}
+
+const home = ref<HomeContentApi | null>(null)
+
+onMounted(async () => {
+  try {
+    home.value = await apiFetch<HomeContentApi>('/contenido/home/')
+  } catch {
+    home.value = null
+  }
+})
 </script>
 
 <template>
@@ -55,16 +76,21 @@ const { open: openAgenda } = useAgendaModal()
 
         <!-- Center text -->
         <div class="relative z-10 text-center px-10">
-          <span class="inline-block text-[11px] tracking-[0.4em] uppercase text-[#f5d984] font-medium mb-4">Nueva Colección</span>
+          <span class="inline-block text-[11px] tracking-[0.4em] uppercase text-[#f5d984] font-medium mb-4">
+            {{ home?.hero_cta_texto ? 'Maná Óptical' : 'Nueva Colección' }}
+          </span>
           <h2 class="text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight" style="font-family: 'Playfair Display', serif;">
-            Una Variedad<br /><em>de Estilos</em>
+            {{ home?.hero_titulo || 'Una Variedad' }}<br /><em>{{ home?.hero_titulo ? '' : 'de Estilos' }}</em>
           </h2>
           <p class="text-sm text-white/70 mb-10 tracking-wide">
-            Encuentra la combinación perfecta para ti
+            {{ home?.hero_subtitulo || 'Encuentra la combinación perfecta para ti' }}
           </p>
-          <button class="btn-shine active:scale-95 inline-flex items-center gap-3 bg-[#314037] text-white text-[11px] font-bold tracking-[0.25em] uppercase px-10 py-4 hover:bg-[#f5d984] hover:text-[#314037] transition-all duration-300">
-            Ver Más <ChevronRight class="h-3.5 w-3.5" />
-          </button>
+          <a
+            :href="home?.hero_cta_href || '/tienda'"
+            class="btn-shine active:scale-95 inline-flex items-center gap-3 bg-[#314037] text-white text-[11px] font-bold tracking-[0.25em] uppercase px-10 py-4 hover:bg-[#f5d984] hover:text-[#314037] transition-all duration-300"
+          >
+            {{ home?.hero_cta_texto || 'Ver Más' }} <ChevronRight class="h-3.5 w-3.5" />
+          </a>
         </div>
 
         <!-- Carousel dots -->
