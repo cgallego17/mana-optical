@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { CheckCircle2, XCircle, ArrowRight } from 'lucide-vue-next'
+import { useAgendaModal } from '../composables/agendaModal'
+
+const { open: openAgenda } = useAgendaModal()
 
 const services = [
   {
@@ -76,7 +79,7 @@ const services = [
             </li>
           </ul>
 
-          <button class="btn-shine active:scale-95 w-full flex items-center justify-center gap-2 bg-[#314037] text-white text-[11px] font-bold tracking-[0.25em] uppercase py-4 hover:bg-[#f5d984] hover:text-[#314037] transition-colors duration-300">
+          <button @click="openAgenda()" class="btn-shine active:scale-95 w-full flex items-center justify-center gap-2 bg-[#314037] text-white text-[11px] font-bold tracking-[0.25em] uppercase py-4 hover:bg-[#f5d984] hover:text-[#314037] transition-colors duration-300">
             Reservar Cita <ArrowRight class="h-3.5 w-3.5" />
           </button>
         </div>

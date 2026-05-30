@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { ArrowRight } from 'lucide-vue-next'
 
 const categorias = ['Todos', 'Salud Visual', 'Estilo', 'Consejos', 'Noticias']
@@ -14,12 +14,6 @@ const posts = [
   { id: 6, imagen: 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=700&q=80', fecha: '01 Jul 2025', categoria: 'Noticias', titulo: 'Nueva Colección 2025', resumen: 'Presentamos nuestra nueva colección de monturas con diseños exclusivos para cada personalidad.' },
 ]
 
-const postsFiltrados = computed => {
-  if (categoriaActiva.value === 'Todos') return posts
-  return posts.filter(p => p.categoria === categoriaActiva.value)
-}
-
-import { computed } from 'vue'
 const filtrados = computed(() => {
   if (categoriaActiva.value === 'Todos') return posts
   return posts.filter(p => p.categoria === categoriaActiva.value)

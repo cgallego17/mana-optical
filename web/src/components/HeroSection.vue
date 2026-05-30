@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ChevronRight, ChevronLeft, ArrowDown } from 'lucide-vue-next'
+import { useAgendaModal } from '../composables/agendaModal'
+
+const { open: openAgenda } = useAgendaModal()
 </script>
 
 <template>
-  <section class="w-full bg-white pt-[108px]">
-    <div class="grid h-[calc(100vh-108px)] grid-cols-1 lg:grid-cols-2">
+  <section class="w-full bg-white overflow-hidden">
+    <div class="grid h-screen grid-cols-1 lg:grid-cols-2 overflow-hidden">
 
       <!-- Left Panel -->
       <div class="relative overflow-hidden flex items-center justify-center min-h-[400px]">
@@ -29,7 +32,7 @@ import { ChevronRight, ChevronLeft, ArrowDown } from 'lucide-vue-next'
             <div class="text-2xl" style="letter-spacing: 0.45em;">CHECK</div>
           </div>
           <div class="w-8 h-px bg-[#f5d984] mx-auto mb-6" />
-          <button class="text-[11px] font-bold uppercase tracking-[0.25em] text-black hover:text-[#f5d984] transition-colors duration-300">
+          <button @click="openAgenda()" class="text-[11px] font-bold uppercase tracking-[0.25em] text-black hover:text-[#f5d984] transition-colors duration-300">
             Reservar cita
           </button>
         </div>

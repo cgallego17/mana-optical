@@ -23,12 +23,12 @@ const links = [
   <footer class="w-full">
 
     <!-- Brands bar -->
-    <div class="bg-[#f8f7f5] border-y border-black/6 py-10 px-8 lg:px-16">
-      <div class="flex items-center justify-between max-w-6xl mx-auto">
+    <div class="bg-[#f8f7f5] border-y border-black/6 py-8 px-6 lg:px-16 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 max-w-6xl mx-auto">
         <span
           v-for="brand in brands"
           :key="brand"
-          class="text-lg font-bold tracking-[0.3em] text-black/18 uppercase select-none hover:text-black/35 transition-colors duration-300 cursor-default"
+          class="text-sm lg:text-lg font-bold tracking-[0.25em] lg:tracking-[0.3em] text-black/20 uppercase select-none hover:text-black/40 transition-colors duration-300 cursor-default whitespace-nowrap"
           style="font-family: 'Playfair Display', serif;"
         >
           {{ brand }}
