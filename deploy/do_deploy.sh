@@ -33,7 +33,7 @@ python3 -m venv "$VENV_DIR"
 
 # Nginx site
 install -d /etc/nginx/sites-available /etc/nginx/sites-enabled
-cp -f "$BACKEND_DIR/../deploy/nginx.conf" /etc/nginx/sites-available/mana
+cp -f "$BACKEND_DIR/../deploy/nginx.http.conf" /etc/nginx/sites-available/mana
 ln -sf /etc/nginx/sites-available/mana /etc/nginx/sites-enabled/mana
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
@@ -44,6 +44,9 @@ cp -f "$BACKEND_DIR/../deploy/mana-backend.service" /etc/systemd/system/mana-bac
 systemctl daemon-reload
 systemctl enable --now mana-backend
 
-echo "\nDeployed. Test:" 
-echo "- https://$DOMAIN_ROOT/" 
-echo "- https://$DOMAIN_ROOT/api/ (should be JSON/404 from Django, not HTML)"
+echo "\nRunning smoke test..."
+bash "$BACKEND_DIR/../deploy/do_smoke_test.sh"
+
+echo "\nDeployed." 
+echo "- http://$DOMAIN_ROOT/" 
+echo "- http://$DOMAIN_ROOT/api/ (should be JSON/404 from Django, not HTML)"
