@@ -21,6 +21,12 @@ apt-get install -y \
   ufw \
   curl
 
+NODE_MAJOR="$(node -v 2>/dev/null | tr -d 'v' | cut -d. -f1 || echo 0)"
+if [[ "$NODE_MAJOR" -lt 20 ]]; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  apt-get install -y nodejs
+fi
+
 mkdir -p "$BACKEND_DIR" "$WEB_DIR"
 
 # Create system user/group if missing

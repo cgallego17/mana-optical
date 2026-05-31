@@ -20,6 +20,14 @@ export DEBIAN_FRONTEND=noninteractive
 command -v git >/dev/null 2>&1 || (apt-get update && apt-get install -y git)
 command -v node >/dev/null 2>&1 || (apt-get update && apt-get install -y nodejs npm)
 
+NODE_MAJOR="$(node -v 2>/dev/null | tr -d 'v' | cut -d. -f1 || echo 0)"
+if [[ "$NODE_MAJOR" -lt 20 ]]; then
+  apt-get update
+  apt-get install -y curl ca-certificates
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  apt-get install -y nodejs
+fi
+
 mkdir -p "$BASE_DIR"
 
 if [[ -d "$REPO_DIR/.git" ]]; then
