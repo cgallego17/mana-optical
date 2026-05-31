@@ -50,25 +50,25 @@ Opción A (recomendada): compilar local y subir `dist/`.
    - `sudo nginx -t`
    - `sudo systemctl reload nginx`
 
-# 6) HTTPS
+# 6) HTTPS (SSL con Certbot)
 ## Requisitos previos
 - A records de `opticamana.com` y `www.opticamana.com` apuntando al droplet.
-- Nginx configurado y sirviendo el sitio por HTTP.
+- Deploy base completado (ejecutar `do_deploy.sh` primero).
 
-## Certbot
-1. Instala:
-   - `sudo apt update`
-   - `sudo apt install -y certbot python3-certbot-nginx`
-2. Emite certificado:
-   - `sudo certbot --nginx -d opticamana.com -d www.opticamana.com`
-3. Verifica auto-renovación:
-   - `sudo certbot renew --dry-run`
+## Pasos
+1. Asegúrate de que los DNS A records estén activos (pueden tardar 24h en propagarse).
+2. Ejecuta el script SSL:
+   - `sudo bash deploy/do_ssl.sh`
+3. El script:
+   - Instala `certbot` y `python3-certbot-nginx`
+   - Emite certificados para `opticamana.com` y `www.opticamana.com`
+   - Cambia Nginx a `nginx.conf` (incluye redirect 80→443 y rutas SSL)
+   - Verifica auto-renovación con `certbot renew --dry-run`
 
-## Nginx
-- Usa `deploy/nginx.conf` (ya incluye redirect 80->443 y rutas del certificado).
-- Prueba y recarga:
-  - `sudo nginx -t`
-  - `sudo systemctl reload nginx`
+## Verificación
+- `curl https://opticamana.com` debe servir el sitio
+- `https://opticamana.com` debe redirigir desde HTTP
+- `/api/` y `/static/` deben funcionar por HTTPS
 
 # Checklist
 - `/api/health/` o `/api/` responde JSON (Django)

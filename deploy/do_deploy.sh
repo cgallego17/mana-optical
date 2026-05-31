@@ -49,6 +49,13 @@ systemctl enable --now mana-backend
 echo "\nRunning smoke test..."
 bash "$SCRIPT_DIR/do_smoke_test.sh"
 
+echo "\n========================================"
+echo "Deploy completado! Ahora configurar SSL:"
+echo "========================================"
+echo "\nEjecutar: sudo bash $SCRIPT_DIR/do_ssl.sh"
+echo "\nEsto instalará certificados SSL con Certbot"
+echo "Asegúrate de que los DNS A records apunten a este servidor."
+
 echo "\nDeployed." 
 echo "- http://$DOMAIN_ROOT/" 
 echo "- http://$DOMAIN_ROOT/api/ (should be JSON/404 from Django, not HTML)"
