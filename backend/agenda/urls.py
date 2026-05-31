@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import DisponibilidadView, ReservaCreateView, ServicioListView
+from .views import AdminReservaListView, DisponibilidadView, ReservaCreateView, ServicioListView
 
 urlpatterns = [
     path(
@@ -17,5 +17,10 @@ urlpatterns = [
         'reservas/',
         ReservaCreateView.as_view(),
         name='agenda_reservas_create',
+    ),
+    path(
+        'admin/reservas/',
+        AdminReservaListView.as_view(),
+        name='admin_agenda_reservas_list',
     ),
 ]

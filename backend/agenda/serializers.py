@@ -18,6 +18,30 @@ class ServicioSerializer(serializers.ModelSerializer):
         )
 
 
+class ReservaAdminSerializer(serializers.ModelSerializer):
+    servicio_nombre = serializers.CharField(source='servicio.nombre', read_only=True)
+    cliente_nombre = serializers.CharField(source='cliente.nombre', read_only=True)
+
+    class Meta:
+        model = Reserva
+        fields = (
+            'id',
+            'servicio',
+            'servicio_nombre',
+            'cliente',
+            'cliente_nombre',
+            'fecha',
+            'hora',
+            'nombre',
+            'telefono',
+            'email',
+            'notas',
+            'estado',
+            'creado_en',
+        )
+        read_only_fields = ('creado_en',)
+
+
 class ReservaCreateSerializer(serializers.ModelSerializer):
     cliente_id = serializers.IntegerField(required=False, write_only=True)
 

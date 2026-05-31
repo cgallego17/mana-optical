@@ -2,12 +2,12 @@ from datetime import date, datetime, time, timedelta
 
 from django.utils.timezone import localdate
 from rest_framework import generics
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Reserva, Servicio
-from .serializers import ReservaCreateSerializer, ServicioSerializer
+from .serializers import ReservaAdminSerializer, ReservaCreateSerializer, ServicioSerializer
 
 
 def build_slots(start: time, end: time, step_minutes: int):
@@ -83,3 +83,11 @@ class ServicioListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Servicio.objects.filter(activo=True).order_by('nombre')
+
+
+class AdminReservaListView(generics.ListAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = ReservaAdminSerializer
+
+    def get_queryset(self):
+        return Reserva.objects.all().select_related('servicio', 'cliente').order_by('-fecha', '-hora')
