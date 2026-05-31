@@ -8,6 +8,8 @@ BASE_DIR="/var/www/mana"
 REPO_DIR="$BASE_DIR/repo"
 BACKEND_TARGET="$BASE_DIR/backend"
 WEB_TARGET="$BASE_DIR/web"
+BACKEND_ENV="$BACKEND_TARGET/.env"
+ENV_BACKUP="$BASE_DIR/.env.backend.bak"
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run as root (sudo)" >&2
@@ -70,10 +72,19 @@ echo "Building frontend..."
   fi
 )
 
+# Preserve backend env between deploys (backend folder is replaced)
+if [[ -f "$BACKEND_ENV" ]]; then
+  cp -f "$BACKEND_ENV" "$ENV_BACKUP"
+fi
+
 # Sync backend + deploy files
 echo "Syncing backend..."
 rm -rf "$BACKEND_TARGET"
 cp -R "$REPO_DIR/backend" "$BACKEND_TARGET"
+
+if [[ -f "$ENV_BACKUP" && ! -f "$BACKEND_ENV" ]]; then
+  cp -f "$ENV_BACKUP" "$BACKEND_ENV"
+fi
 
 echo "Syncing web dist..."
 mkdir -p "$WEB_TARGET"
