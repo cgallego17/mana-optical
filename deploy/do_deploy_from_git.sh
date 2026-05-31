@@ -24,6 +24,7 @@ mkdir -p "$BASE_DIR"
 
 if [[ -d "$REPO_DIR/.git" ]]; then
   echo "Updating repo..."
+  git config --global --add safe.directory "$REPO_DIR" >/dev/null 2>&1 || true
   git -C "$REPO_DIR" fetch --all
   git -C "$REPO_DIR" checkout "$BRANCH"
   git -C "$REPO_DIR" pull --ff-only
