@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Reserva, Servicio
-from .serializers import ReservaAdminSerializer, ReservaCreateSerializer, ServicioSerializer
+from .serializers import ReservaAdminSerializer, ReservaCreateSerializer, ServicioAdminSerializer, ServicioSerializer
 
 
 def build_slots(start: time, end: time, step_minutes: int):
@@ -91,3 +91,21 @@ class AdminReservaListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Reserva.objects.all().select_related('servicio', 'cliente').order_by('-fecha', '-hora')
+
+
+class AdminReservaDetailView(generics.UpdateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = ReservaAdminSerializer
+    queryset = Reserva.objects.all()
+
+
+class AdminServicioListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = ServicioAdminSerializer
+    queryset = Servicio.objects.all().order_by('nombre')
+
+
+class AdminServicioDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = ServicioAdminSerializer
+    queryset = Servicio.objects.all()

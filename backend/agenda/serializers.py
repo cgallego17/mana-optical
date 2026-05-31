@@ -18,6 +18,12 @@ class ServicioSerializer(serializers.ModelSerializer):
         )
 
 
+class ServicioAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Servicio
+        fields = ('id', 'nombre', 'slug', 'duracion_minutos', 'activo')
+
+
 class ReservaAdminSerializer(serializers.ModelSerializer):
     servicio_nombre = serializers.CharField(source='servicio.nombre', read_only=True)
     cliente_nombre = serializers.CharField(source='cliente.nombre', read_only=True)
