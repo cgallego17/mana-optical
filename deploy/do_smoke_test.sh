@@ -24,17 +24,17 @@ if [[ "$code" != "200" ]]; then
   exit 1
 fi
 
-echo "[4/6] HTTP /api/ (should not be HTML)"
-ct=$(curl -sI http://127.0.0.1/api/ | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n1)
-if echo "$ct" | grep -q "text/html"; then
-  echo "API is returning HTML via nginx (proxy misconfigured)" >&2
+echo "[4/6] HTTP /api/catalogo/marcas/ (must be JSON)"
+ct=$(curl -sI http://127.0.0.1/api/catalogo/marcas/ | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n1)
+if ! echo "$ct" | grep -q "application/json"; then
+  echo "Expected JSON for /api/catalogo/marcas/ but got '$ct'" >&2
   exit 1
 fi
 
-echo "[5/6] HTTP /api/catalogo/marcas/"
-ct2=$(curl -sI http://127.0.0.1/api/catalogo/marcas/ | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n1)
-if echo "$ct2" | grep -q "text/html"; then
-  echo "Expected JSON for /api/catalogo/marcas/ but got HTML" >&2
+echo "[5/6] HTTP /api/ (should not be SPA HTML)"
+body=$(curl -s http://127.0.0.1/api/ | head -n 50)
+if echo "$body" | grep -qi "<div id=\"app\">"; then
+  echo "API path is serving SPA HTML (proxy misconfigured)" >&2
   exit 1
 fi
 
