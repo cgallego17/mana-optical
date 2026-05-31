@@ -18,21 +18,21 @@ echo "[2/6] nginx config"
 nginx -t
 
 echo "[3/6] HTTP / (SPA)"
-code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/)
+code=$(curl -s -H "Host: $DOMAIN_ROOT" -o /dev/null -w "%{http_code}" http://127.0.0.1/)
 if [[ "$code" != "200" ]]; then
   echo "Expected 200 from http://127.0.0.1/ got $code" >&2
   exit 1
 fi
 
 echo "[4/6] HTTP /api/catalogo/marcas/ (must be JSON)"
-ct=$(curl -sI http://127.0.0.1/api/catalogo/marcas/ | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n1)
+ct=$(curl -sI -H "Host: $DOMAIN_ROOT" http://127.0.0.1/api/catalogo/marcas/ | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n1)
 if ! echo "$ct" | grep -q "application/json"; then
   echo "Expected JSON for /api/catalogo/marcas/ but got '$ct'" >&2
   exit 1
 fi
 
 echo "[5/6] HTTP /api/ (should not be SPA HTML)"
-body=$(curl -s http://127.0.0.1/api/ | head -n 50)
+body=$(curl -s -H "Host: $DOMAIN_ROOT" http://127.0.0.1/api/ | head -n 50)
 if echo "$body" | grep -qi "<div id=\"app\">"; then
   echo "API path is serving SPA HTML (proxy misconfigured)" >&2
   exit 1
