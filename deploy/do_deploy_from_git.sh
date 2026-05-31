@@ -58,7 +58,17 @@ if [[ ! -f "$REPO_DIR/web/package.json" ]]; then
 fi
 
 echo "Building frontend..."
-( cd "$REPO_DIR/web" && npm ci && NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=2048" npm run build )
+( 
+  cd "$REPO_DIR/web"
+  npm ci
+  MEM_MB="$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)"
+  if [[ "$MEM_MB" -gt 0 && "$MEM_MB" -lt 900 ]]; then
+    echo "Low RAM detected (${MEM_MB}MB). Running 'vite build' only (skipping vue-tsc)."
+    NODE_OPTIONS="--max-old-space-size=2048" npx vite build
+  else
+    NODE_OPTIONS="--max-old-space-size=2048" npm run build
+  fi
+)
 
 # Sync backend + deploy files
 echo "Syncing backend..."
