@@ -25,8 +25,7 @@ def vue_app(request, **_kwargs):
 
 
 urlpatterns = [
-    # Django admin nativo — movido a /django-admin/ para no colisionar con el panel Vue en /admin/
-    path('django-admin/', admin.site.urls),
+    path('panel/', admin.site.urls),
 
     # API REST
     path('api/', include('api.urls')),
