@@ -28,6 +28,16 @@ if [[ "$NODE_MAJOR" -lt 20 ]]; then
   apt-get install -y nodejs
 fi
 
+# Mitigate low-memory droplets (e.g. 512MB): add swap if none exists
+if ! swapon --show | grep -q '^/'; then
+  if [[ ! -f /swapfile ]]; then
+    fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+    chmod 600 /swapfile
+    mkswap /swapfile
+  fi
+  swapon /swapfile || true
+fi
+
 mkdir -p "$BASE_DIR"
 
 if [[ -d "$REPO_DIR/.git" ]]; then
@@ -48,7 +58,7 @@ if [[ ! -f "$REPO_DIR/web/package.json" ]]; then
 fi
 
 echo "Building frontend..."
-( cd "$REPO_DIR/web" && npm ci && npm run build )
+( cd "$REPO_DIR/web" && npm ci && NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=2048" npm run build )
 
 # Sync backend + deploy files
 echo "Syncing backend..."
