@@ -18,7 +18,7 @@ const { setOrganization } = useSeo()
 setOrganization()
 
 const route = useRoute()
-const isAdminRoute = computed(() => String(route.path || '').startsWith('/admin'))
+const isAdminRoute = computed(() => String(route.path || '').startsWith('/panel'))
 
 // Escuchar evento global para abrir agenda desde cualquier componente
 if (typeof window !== 'undefined') {

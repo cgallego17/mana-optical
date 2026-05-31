@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-Disallow: /admin/
+Disallow: /panel/
 Disallow: /api/
 
 Sitemap: https://manaoptical.com/sitemap.xml

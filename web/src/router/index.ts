@@ -22,9 +22,9 @@ const router = createRouter({
     { path: '/cuenta',    name: 'cuenta',    component: () => import('../views/CuentaView.vue') },
     { path: '/carrito',   name: 'carrito',   component: () => import('../views/CarritoView.vue') },
 
-    { path: '/admin/login', name: 'admin-login', meta: { title: 'Admin | Login' }, component: () => import('../views/AdminLoginView.vue') },
+    { path: '/panel/login', name: 'admin-login', meta: { title: 'Panel | Login' }, component: () => import('../views/AdminLoginView.vue') },
     {
-      path: '/admin',
+      path: '/panel',
       meta: { requiresAuth: true },
       component: () => import('../views/AdminView.vue'),
       children: [

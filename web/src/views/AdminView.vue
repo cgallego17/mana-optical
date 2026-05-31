@@ -16,16 +16,16 @@ type NavItem =
   | { type: 'header'; label: string }
 
 const nav: NavItem[] = [
-  { type: 'link', to: '/admin/dashboard', name: 'admin-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { type: 'link', to: '/panel/dashboard', name: 'admin-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { type: 'header', label: 'Catálogo' },
-  { type: 'link', to: '/admin/productos',  name: 'admin-productos',  icon: Package,  label: 'Productos' },
-  { type: 'link', to: '/admin/categorias', name: 'admin-categorias', icon: Tag,      label: 'Categorías' },
-  { type: 'link', to: '/admin/marcas',     name: 'admin-marcas',     icon: Award,    label: 'Marcas' },
+  { type: 'link', to: '/panel/productos',  name: 'admin-productos',  icon: Package,  label: 'Productos' },
+  { type: 'link', to: '/panel/categorias', name: 'admin-categorias', icon: Tag,      label: 'Categorías' },
+  { type: 'link', to: '/panel/marcas',     name: 'admin-marcas',     icon: Award,    label: 'Marcas' },
   { type: 'header', label: 'Contenido' },
-  { type: 'link', to: '/admin/blog',       name: 'admin-blog',       icon: FileText, label: 'Blog' },
+  { type: 'link', to: '/panel/blog',       name: 'admin-blog',       icon: FileText, label: 'Blog' },
   { type: 'header', label: 'Agenda' },
-  { type: 'link', to: '/admin/reservas',   name: 'admin-reservas',   icon: Calendar, label: 'Reservas' },
-  { type: 'link', to: '/admin/servicios',  name: 'admin-servicios',  icon: Clock,    label: 'Servicios' },
+  { type: 'link', to: '/panel/reservas',   name: 'admin-reservas',   icon: Calendar, label: 'Reservas' },
+  { type: 'link', to: '/panel/servicios',  name: 'admin-servicios',  icon: Clock,    label: 'Servicios' },
 ]
 
 function salir() {

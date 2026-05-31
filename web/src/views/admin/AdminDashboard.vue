@@ -73,10 +73,10 @@ onMounted(cargar)
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         <RouterLink
           v-for="link in [
-            { to: '/admin/productos',  label: 'Gestionar productos' },
-            { to: '/admin/reservas',   label: 'Ver reservas' },
-            { to: '/admin/blog',       label: 'Gestionar blog' },
-            { to: '/admin/servicios',  label: 'Servicios agenda' },
+            { to: '/panel/productos',  label: 'Gestionar productos' },
+            { to: '/panel/reservas',   label: 'Ver reservas' },
+            { to: '/panel/blog',       label: 'Gestionar blog' },
+            { to: '/panel/servicios',  label: 'Servicios agenda' },
           ]"
           :key="link.to"
           :to="link.to"
