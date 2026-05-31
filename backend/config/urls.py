@@ -25,7 +25,7 @@ def vue_app(request, **_kwargs):
 
 
 urlpatterns = [
-    path('panel/', admin.site.urls),
+    path('django-admin/', admin.site.urls),
 
     # API REST
     path('api/', include('api.urls')),
