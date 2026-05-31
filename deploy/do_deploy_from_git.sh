@@ -90,6 +90,7 @@ echo "Syncing web dist..."
 mkdir -p "$WEB_TARGET"
 rm -rf "$WEB_TARGET/dist"
 cp -R "$REPO_DIR/web/dist" "$WEB_TARGET/dist"
+chown -R www-data:www-data "$WEB_TARGET"
 
 echo "Syncing deploy scripts..."
 rm -rf "$BASE_DIR/deploy"

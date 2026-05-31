@@ -33,6 +33,10 @@ python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/python" "$BACKEND_DIR/manage.py" migrate
 "$VENV_DIR/bin/python" "$BACKEND_DIR/manage.py" collectstatic --noinput
 
+# Fix ownership so gunicorn (www-data) can write to its working directory
+chown -R www-data:www-data "$BACKEND_DIR"
+chown -R www-data:www-data "$BASE_DIR/web"
+
 # Nginx site
 install -d /etc/nginx/sites-available /etc/nginx/sites-enabled
 cp -f "$SCRIPT_DIR/nginx.http.conf" /etc/nginx/sites-available/mana
