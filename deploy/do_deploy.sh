@@ -37,10 +37,15 @@ python3 -m venv "$VENV_DIR"
 chown -R www-data:www-data "$BACKEND_DIR"
 chown -R www-data:www-data "$BASE_DIR/web"
 
-# Nginx site
+# Nginx site — keep SSL config if already installed, else use HTTP-only
 install -d /etc/nginx/sites-available /etc/nginx/sites-enabled
-cp -f "$SCRIPT_DIR/nginx.http.conf" /etc/nginx/sites-available/mana
-ln -sf /etc/nginx/sites-available/mana /etc/nginx/sites-enabled/mana
+NGINX_SITE=/etc/nginx/sites-available/mana
+if grep -q "listen 443" "$NGINX_SITE" 2>/dev/null; then
+  echo "SSL nginx config already active, skipping overwrite."
+else
+  cp -f "$SCRIPT_DIR/nginx.http.conf" "$NGINX_SITE"
+fi
+ln -sf "$NGINX_SITE" /etc/nginx/sites-enabled/mana
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
