@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Reserva, Servicio
+from .models import HorarioAtencion, Reserva, Servicio
+
+
+@admin.register(HorarioAtencion)
+class HorarioAtencionAdmin(admin.ModelAdmin):
+    list_display = ('dia_semana', 'abierto', 'hora_inicio', 'hora_fin')
+    list_editable = ('abierto', 'hora_inicio', 'hora_fin')
 
 
 @admin.register(Servicio)

@@ -36,6 +36,7 @@ const router = createRouter({
         { path: 'blog',      name: 'admin-blog',       component: () => import('../views/admin/AdminBlog.vue') },
         { path: 'reservas',  name: 'admin-reservas',   component: () => import('../views/admin/AdminReservas.vue') },
         { path: 'servicios', name: 'admin-servicios',  component: () => import('../views/admin/AdminServicios.vue') },
+        { path: 'horarios',  name: 'admin-horarios',   component: () => import('../views/admin/AdminHorarios.vue') },
       ],
     },
 

@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from clientes.models import Cliente
 
-from .models import Reserva, Servicio
+from .models import HorarioAtencion, Reserva, Servicio
 
 
 class ServicioSerializer(serializers.ModelSerializer):
@@ -32,6 +32,22 @@ class ServicioAdminSerializer(serializers.ModelSerializer):
                 'Debe ser una lista de días (0=Lunes … 6=Domingo).',
             )
         return sorted(set(value))
+
+
+class HorarioAtencionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HorarioAtencion
+        fields = ('id', 'dia_semana', 'abierto', 'hora_inicio', 'hora_fin')
+        read_only_fields = ('dia_semana',)
+
+    def validate(self, attrs):
+        inicio = attrs.get('hora_inicio', getattr(self.instance, 'hora_inicio', None))
+        fin = attrs.get('hora_fin', getattr(self.instance, 'hora_fin', None))
+        if inicio and fin and inicio >= fin:
+            raise serializers.ValidationError(
+                {'hora_fin': 'La hora de fin debe ser posterior a la de inicio.'},
+            )
+        return attrs
 
 
 class ReservaAdminSerializer(serializers.ModelSerializer):
@@ -80,8 +96,9 @@ class ReservaCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'La fecha no puede ser en el pasado.',
             )
-        if value.weekday() == 6:
-            raise serializers.ValidationError('No hay atención los domingos.')
+        horario = HorarioAtencion.get_for_weekday(value.weekday())
+        if not horario.abierto:
+            raise serializers.ValidationError('No hay atención ese día.')
         return value
 
     def validate(self, attrs):

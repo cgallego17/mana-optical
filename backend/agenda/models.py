@@ -1,4 +1,45 @@
+from datetime import time
+
 from django.db import models
+
+DIAS_SEMANA = (
+    (0, 'Lunes'),
+    (1, 'Martes'),
+    (2, 'Miércoles'),
+    (3, 'Jueves'),
+    (4, 'Viernes'),
+    (5, 'Sábado'),
+    (6, 'Domingo'),
+)
+
+
+class HorarioAtencion(models.Model):
+    dia_semana = models.PositiveSmallIntegerField(choices=DIAS_SEMANA, unique=True)
+    abierto = models.BooleanField(default=True)
+    hora_inicio = models.TimeField(default=time(9, 0))
+    hora_fin = models.TimeField(default=time(21, 0))
+
+    class Meta:
+        ordering = ['dia_semana']
+
+    def __str__(self) -> str:
+        return self.get_dia_semana_display()
+
+    @classmethod
+    def get_for_weekday(cls, weekday: int) -> 'HorarioAtencion':
+        obj, _ = cls.objects.get_or_create(
+            dia_semana=weekday,
+            defaults={'abierto': weekday != 6},
+        )
+        return obj
+
+    @classmethod
+    def ensure_semana(cls) -> None:
+        existentes = set(cls.objects.values_list('dia_semana', flat=True))
+        faltantes = [d for d, _ in DIAS_SEMANA if d not in existentes]
+        cls.objects.bulk_create([
+            cls(dia_semana=d, abierto=d != 6) for d in faltantes
+        ])
 
 
 class Servicio(models.Model):

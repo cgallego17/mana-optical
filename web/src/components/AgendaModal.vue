@@ -27,12 +27,41 @@ type SlotApi = {
   disponible: boolean
 }
 
+type HorarioApi = {
+  dia_semana: number // 0=Lunes … 6=Domingo
+  abierto: boolean
+  hora_inicio: string
+  hora_fin: string
+}
+
 const servicios = ref<ServicioApi[]>([])
+const horarios = ref<HorarioApi[]>([])
 const slots = ref<SlotApi[]>([])
 const cargandoServicios = ref(false)
 const cargandoSlots = ref(false)
 const creandoReserva = ref(false)
 const errorMsg = ref('')
+
+async function cargarHorarios() {
+  try {
+    horarios.value = await apiFetch<HorarioApi[]>('/agenda/horarios/')
+  } catch {
+    horarios.value = []
+  }
+}
+
+function horarioDelDia(diaPy: number): HorarioApi | undefined {
+  return horarios.value.find(h => h.dia_semana === diaPy)
+}
+
+const diasAbiertosTexto = computed(() => {
+  if (!horarios.value.length) return 'Atención: Lunes a Sábado · Cerrado domingos'
+  const abiertos = horarios.value
+    .filter(h => h.abierto)
+    .sort((a, b) => a.dia_semana - b.dia_semana)
+    .map(h => nombreDias[(h.dia_semana + 1) % 7])
+  return abiertos.length ? `Atención: ${abiertos.join(', ')}` : 'Sin días de atención configurados'
+})
 
 const servicioActual = computed(() =>
   servicioSeleccionado.value
@@ -59,14 +88,13 @@ const diasDelMes = computed(() => {
 function esDiaValido(d: Date | null): boolean {
   if (!d) return false
   if (d < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) return false
-  // Cerrado domingos
-  if (d.getDay() === 0) return false
-  // Restricción de días propia del servicio (0=Lunes … 6=Domingo)
+  const diaPy = (d.getDay() + 6) % 7 // 0=Lunes … 6=Domingo
+  // Horario global de atención
+  const horario = horarioDelDia(diaPy)
+  if (horario && !horario.abierto) return false
+  // Restricción de días propia del servicio
   const diasServicio = servicioActual.value?.dias_disponibles ?? []
-  if (diasServicio.length) {
-    const diaPy = (d.getDay() + 6) % 7
-    if (!diasServicio.includes(diaPy)) return false
-  }
+  if (diasServicio.length && !diasServicio.includes(diaPy)) return false
   // Solo 30 días adelante
   const limite = new Date(hoy); limite.setDate(hoy.getDate() + 30)
   return d <= limite
@@ -195,6 +223,7 @@ watch(isOpen, (val) => {
   document.body.style.overflow = val ? 'hidden' : ''
   if (val) {
     cargarServicios()
+    cargarHorarios()
   } else {
     setTimeout(reset, 300)
   }
@@ -331,7 +360,7 @@ watch(servicioSeleccionado, () => {
             <p class="text-[10px] text-black/35 mt-4">
               {{ (servicioActual?.dias_disponibles?.length ?? 0) > 0
                 ? `Disponible: ${servicioActual!.dias_disponibles.map(d => nombreDias[(d + 1) % 7]).join(', ')}`
-                : 'Atención: Lunes a Sábado · Cerrado domingos' }}
+                : diasAbiertosTexto }}
             </p>
           </div>
 

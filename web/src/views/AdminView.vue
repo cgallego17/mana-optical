@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import {
   LayoutDashboard, Package, Tag, Award, FileText,
-  Calendar, Clock, LogOut, Menu, X
+  Calendar, Clock, CalendarClock, LogOut, Menu, X
 } from 'lucide-vue-next'
 import { useAuth } from '../composables/auth'
 
@@ -26,6 +26,7 @@ const nav: NavItem[] = [
   { type: 'header', label: 'Agenda' },
   { type: 'link', to: '/panel/reservas',   name: 'admin-reservas',   icon: Calendar, label: 'Reservas' },
   { type: 'link', to: '/panel/servicios',  name: 'admin-servicios',  icon: Clock,    label: 'Servicios' },
+  { type: 'link', to: '/panel/horarios',   name: 'admin-horarios',   icon: CalendarClock, label: 'Horarios' },
 ]
 
 function salir() {

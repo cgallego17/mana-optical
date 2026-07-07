@@ -6,8 +6,14 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Reserva, Servicio
-from .serializers import ReservaAdminSerializer, ReservaCreateSerializer, ServicioAdminSerializer, ServicioSerializer
+from .models import HorarioAtencion, Reserva, Servicio
+from .serializers import (
+    HorarioAtencionSerializer,
+    ReservaAdminSerializer,
+    ReservaCreateSerializer,
+    ServicioAdminSerializer,
+    ServicioSerializer,
+)
 
 
 def build_slots(start: time, end: time, step_minutes: int):
@@ -46,7 +52,9 @@ class DisponibilidadView(APIView):
 
         if fecha < localdate():
             return Response({'fecha': fecha_str, 'slots': []})
-        if fecha.weekday() == 6:
+
+        horario = HorarioAtencion.get_for_weekday(fecha.weekday())
+        if not horario.abierto:
             return Response({'fecha': fecha_str, 'slots': []})
 
         servicio_id = request.query_params.get('servicio')
@@ -58,8 +66,7 @@ class DisponibilidadView(APIView):
             if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
                 return Response({'fecha': fecha_str, 'slots': []})
 
-        # Horario base: 9:00 a 21:00 cada 30 min
-        slots = build_slots(time(9, 0), time(21, 0), 30)
+        slots = build_slots(horario.hora_inicio, horario.hora_fin, 30)
 
         reserved = set(
             Reserva.objects.filter(fecha=fecha)
@@ -118,3 +125,27 @@ class AdminServicioDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = ServicioAdminSerializer
     queryset = Servicio.objects.all()
+
+
+class HorarioListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = HorarioAtencionSerializer
+
+    def get_queryset(self):
+        HorarioAtencion.ensure_semana()
+        return HorarioAtencion.objects.all()
+
+
+class AdminHorarioListView(generics.ListAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = HorarioAtencionSerializer
+
+    def get_queryset(self):
+        HorarioAtencion.ensure_semana()
+        return HorarioAtencion.objects.all()
+
+
+class AdminHorarioDetailView(generics.UpdateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = HorarioAtencionSerializer
+    queryset = HorarioAtencion.objects.all()
