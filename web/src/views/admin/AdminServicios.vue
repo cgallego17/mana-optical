@@ -6,16 +6,29 @@ import { useAuth } from '../../composables/auth'
 
 const { getAccessToken } = useAuth()
 
-type Servicio = { id: number; nombre: string; slug: string; duracion_minutos: number }
+type Servicio = { id: number; nombre: string; slug: string; duracion_minutos: number; dias_disponibles: number[] }
+
+const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 const cargando  = ref(false)
 const errorMsg  = ref('')
 const items     = ref<Servicio[]>([])
 const editId    = ref<number | null>(null)
-const editForm  = ref({ nombre: '', slug: '', duracion_minutos: 30 })
-const newForm   = ref({ nombre: '', slug: '', duracion_minutos: 30 })
+const editForm  = ref({ nombre: '', slug: '', duracion_minutos: 30, dias_disponibles: [] as number[] })
+const newForm   = ref({ nombre: '', slug: '', duracion_minutos: 30, dias_disponibles: [] as number[] })
 const guardando = ref(false)
 const creando   = ref(false)
+
+function alternarDia(dias: number[], d: number) {
+  const i = dias.indexOf(d)
+  if (i === -1) dias.push(d)
+  else dias.splice(i, 1)
+}
+
+function textoDias(dias: number[]): string {
+  if (!dias.length) return 'Todos los días'
+  return [...dias].sort().map(d => DIAS[d]).join(', ')
+}
 
 async function cargar() {
   cargando.value = true; errorMsg.value = ''
@@ -26,7 +39,7 @@ async function cargar() {
 
 function iniciarEditar(s: Servicio) {
   editId.value = s.id
-  editForm.value = { nombre: s.nombre, slug: s.slug, duracion_minutos: s.duracion_minutos }
+  editForm.value = { nombre: s.nombre, slug: s.slug, duracion_minutos: s.duracion_minutos, dias_disponibles: [...(s.dias_disponibles ?? [])] }
 }
 function cancelarEditar() { editId.value = null }
 
@@ -58,7 +71,7 @@ async function crear() {
   try {
     const s = await apiFetchAuth<Servicio>('/agenda/admin/servicios/', token, { method: 'POST', body: JSON.stringify(newForm.value) })
     items.value = [...items.value, s]
-    newForm.value = { nombre: '', slug: '', duracion_minutos: 30 }
+    newForm.value = { nombre: '', slug: '', duracion_minutos: 30, dias_disponibles: [] }
   } catch (e) { errorMsg.value = e instanceof Error ? e.message : 'Error' }
   finally { creando.value = false }
 }
@@ -83,6 +96,7 @@ onMounted(cargar)
             <th class="admin-th">Nombre</th>
             <th class="admin-th">Slug</th>
             <th class="admin-th">Duración</th>
+            <th class="admin-th">Días</th>
             <th class="admin-th w-20"></th>
           </tr>
         </thead>
@@ -101,6 +115,19 @@ onMounted(cargar)
               <span v-else class="text-white/60 text-[12px]">{{ s.duracion_minutos }} min</span>
             </td>
             <td class="px-4 py-3">
+              <div v-if="editId === s.id" class="flex gap-1 flex-wrap max-w-[180px]">
+                <button
+                  v-for="(d, idx) in DIAS" :key="idx" type="button"
+                  @click="alternarDia(editForm.dias_disponibles, idx)"
+                  class="w-8 h-7 text-[10px] font-bold rounded border transition-colors"
+                  :class="editForm.dias_disponibles.includes(idx)
+                    ? 'bg-[#f5d984] text-[#314037] border-[#f5d984]'
+                    : 'border-white/15 text-white/40 hover:border-white/30'"
+                >{{ d }}</button>
+              </div>
+              <span v-else class="text-white/40 text-[11px]">{{ textoDias(s.dias_disponibles) }}</span>
+            </td>
+            <td class="px-4 py-3">
               <div class="flex items-center gap-1">
                 <template v-if="editId === s.id">
                   <button @click="guardarEditar(s)" :disabled="guardando" class="p-1.5 text-[#f5d984] hover:bg-white/10 rounded"><Check class="h-3.5 w-3.5" /></button>
@@ -114,7 +141,7 @@ onMounted(cargar)
             </td>
           </tr>
           <tr v-if="!items.length">
-            <td colspan="4" class="px-4 py-8 text-center text-[11px] text-white/30">Sin servicios.</td>
+            <td colspan="5" class="px-4 py-8 text-center text-[11px] text-white/30">Sin servicios.</td>
           </tr>
         </tbody>
       </table>
@@ -134,6 +161,19 @@ onMounted(cargar)
         <div class="w-28">
           <label class="admin-label">Duración (min)</label>
           <input v-model.number="newForm.duracion_minutos" type="number" min="5" step="5" class="admin-input" />
+        </div>
+        <div>
+          <label class="admin-label">Días disponibles</label>
+          <div class="flex gap-1">
+            <button
+              v-for="(d, idx) in DIAS" :key="idx" type="button"
+              @click="alternarDia(newForm.dias_disponibles, idx)"
+              class="w-8 h-8 text-[10px] font-bold rounded border transition-colors"
+              :class="newForm.dias_disponibles.includes(idx)
+                ? 'bg-[#f5d984] text-[#314037] border-[#f5d984]'
+                : 'border-white/15 text-white/40 hover:border-white/30'"
+            >{{ d }}</button>
+          </div>
         </div>
         <div class="flex items-end">
           <button @click="crear" :disabled="creando || !newForm.nombre.trim()"

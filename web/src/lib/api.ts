@@ -7,6 +7,14 @@ export function getApiBaseUrl(): string {
   return (envUrl && envUrl.trim()) ? envUrl.replace(/\/+$/, '') : DEFAULT_API_BASE_URL
 }
 
+export class ApiError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const base = getApiBaseUrl()
   const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`
@@ -27,7 +35,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     } catch {
       detail = await res.text()
     }
-    throw new Error(detail || `HTTP ${res.status}`)
+    throw new ApiError(detail || `HTTP ${res.status}`, res.status)
   }
 
   const contentType = res.headers.get('content-type') || ''
@@ -49,12 +57,48 @@ export function unwrapResults<T>(data: T[] | { results: T[] } | null | undefined
   return []
 }
 
+let refreshPromise: Promise<string | null> | null = null
+
+// Evita disparar varios refresh en paralelo cuando varias llamadas 401 a la vez
+function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const { useAuth } = await import('../composables/auth')
+      const auth = useAuth()
+      try {
+        await auth.refresh()
+        return auth.getAccessToken()
+      } catch {
+        auth.logout()
+        return null
+      }
+    })().finally(() => {
+      refreshPromise = null
+    })
+  }
+  return refreshPromise
+}
+
 export async function apiFetchAuth<T>(path: string, accessToken: string, init?: RequestInit): Promise<T> {
-  return apiFetch<T>(path, {
+  const withToken = (token: string) => apiFetch<T>(path, {
     ...(init ?? {}),
     headers: {
       ...(init?.headers ?? {}),
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${token}`,
     },
   })
+
+  try {
+    return await withToken(accessToken)
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 401) throw err
+
+    const newToken = await refreshAccessToken()
+    if (newToken) return withToken(newToken)
+
+    if (typeof window !== 'undefined' && window.location.pathname !== '/panel/login') {
+      window.location.href = '/panel/login'
+    }
+    throw err
+  }
 }

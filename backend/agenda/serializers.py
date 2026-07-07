@@ -15,13 +15,23 @@ class ServicioSerializer(serializers.ModelSerializer):
             'nombre',
             'slug',
             'duracion_minutos',
+            'dias_disponibles',
         )
 
 
 class ServicioAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Servicio
-        fields = ('id', 'nombre', 'slug', 'duracion_minutos', 'activo')
+        fields = ('id', 'nombre', 'slug', 'duracion_minutos', 'activo', 'dias_disponibles')
+
+    def validate_dias_disponibles(self, value):
+        if not isinstance(value, list) or not all(
+            isinstance(d, int) and 0 <= d <= 6 for d in value
+        ):
+            raise serializers.ValidationError(
+                'Debe ser una lista de días (0=Lunes … 6=Domingo).',
+            )
+        return sorted(set(value))
 
 
 class ReservaAdminSerializer(serializers.ModelSerializer):
@@ -99,6 +109,12 @@ class ReservaCreateSerializer(serializers.ModelSerializer):
                 attrs['cliente'] = cliente
 
         fecha = attrs.get('fecha')
+        servicio = attrs.get('servicio')
+        if fecha and servicio and servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
+            raise serializers.ValidationError(
+                {'fecha': 'El servicio no está disponible ese día.'},
+            )
+
         hora = attrs.get('hora')
         if fecha and hora:
             exists = Reserva.objects.filter(

@@ -19,6 +19,7 @@ type ServicioApi = {
   nombre: string
   slug: string
   duracion_minutos: number
+  dias_disponibles: number[]
 }
 
 type SlotApi = {
@@ -60,6 +61,12 @@ function esDiaValido(d: Date | null): boolean {
   if (d < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) return false
   // Cerrado domingos
   if (d.getDay() === 0) return false
+  // Restricción de días propia del servicio (0=Lunes … 6=Domingo)
+  const diasServicio = servicioActual.value?.dias_disponibles ?? []
+  if (diasServicio.length) {
+    const diaPy = (d.getDay() + 6) % 7
+    if (!diasServicio.includes(diaPy)) return false
+  }
   // Solo 30 días adelante
   const limite = new Date(hoy); limite.setDate(hoy.getDate() + 30)
   return d <= limite
@@ -128,8 +135,10 @@ async function cargarSlots() {
   cargandoSlots.value = true
   errorMsg.value = ''
   try {
+    const params = new URLSearchParams({ fecha: formatIsoDate(fechaSeleccionada.value) })
+    if (servicioSeleccionado.value) params.set('servicio', String(servicioSeleccionado.value))
     const data = await apiFetch<{ fecha: string; slots: SlotApi[] }>(
-      `/agenda/disponibilidad/?fecha=${formatIsoDate(fechaSeleccionada.value)}`,
+      `/agenda/disponibilidad/?${params.toString()}`,
     )
     slots.value = data.slots
     if (horaSeleccionada.value && esHoraOcupada(horaSeleccionada.value)) {
@@ -195,6 +204,13 @@ watch(fechaSeleccionada, async (val) => {
   slots.value = []
   if (!val) return
   await cargarSlots()
+})
+
+watch(servicioSeleccionado, () => {
+  if (fechaSeleccionada.value && !esDiaValido(fechaSeleccionada.value)) {
+    fechaSeleccionada.value = null
+    horaSeleccionada.value = ''
+  }
 })
 </script>
 
@@ -312,7 +328,11 @@ watch(fechaSeleccionada, async (val) => {
                 >{{ dia.getDate() }}</button>
               </div>
             </div>
-            <p class="text-[10px] text-black/35 mt-4">Atención: Lunes a Sábado · Cerrado domingos</p>
+            <p class="text-[10px] text-black/35 mt-4">
+              {{ (servicioActual?.dias_disponibles?.length ?? 0) > 0
+                ? `Disponible: ${servicioActual!.dias_disponibles.map(d => nombreDias[(d + 1) % 7]).join(', ')}`
+                : 'Atención: Lunes a Sábado · Cerrado domingos' }}
+            </p>
           </div>
 
           <!-- Paso 3: Elegir hora -->

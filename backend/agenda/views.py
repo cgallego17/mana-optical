@@ -49,6 +49,15 @@ class DisponibilidadView(APIView):
         if fecha.weekday() == 6:
             return Response({'fecha': fecha_str, 'slots': []})
 
+        servicio_id = request.query_params.get('servicio')
+        if servicio_id:
+            try:
+                servicio = Servicio.objects.get(pk=servicio_id)
+            except (Servicio.DoesNotExist, ValueError):
+                return Response({'detail': 'Servicio no existe.'}, status=400)
+            if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
+                return Response({'fecha': fecha_str, 'slots': []})
+
         # Horario base: 9:00 a 21:00 cada 30 min
         slots = build_slots(time(9, 0), time(21, 0), 30)
 

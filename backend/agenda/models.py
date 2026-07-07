@@ -6,6 +6,9 @@ class Servicio(models.Model):
     slug = models.SlugField(max_length=140, unique=True)
     duracion_minutos = models.PositiveIntegerField(default=30)
     activo = models.BooleanField(default=True)
+    # Días de la semana en que se ofrece el servicio (0=Lunes ... 6=Domingo).
+    # Lista vacía significa "todos los días" (sujeto a las reglas globales de atención).
+    dias_disponibles = models.JSONField(default=list, blank=True)
 
     def __str__(self) -> str:
         return self.nombre
