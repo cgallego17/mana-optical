@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Package, FileText, Calendar, Clock } from 'lucide-vue-next'
-import { apiFetchAuth } from '../../lib/api'
+import { apiFetchAuth, ApiError } from '../../lib/api'
 import { useAuth } from '../../composables/auth'
 
 const { getAccessToken } = useAuth()
@@ -15,6 +15,8 @@ const kpis = ref<KPI[]>([
   { label: 'Reservas pendientes',value: '—', icon: Clock,    color: 'text-amber-400' },
 ])
 
+const errorMsg = ref('')
+
 type ProductosRes  = { count?: number; results?: unknown[] }
 type PostAdmin     = { publicado: boolean }
 type ReservaAdmin  = { estado: string }
@@ -23,11 +25,21 @@ async function cargar() {
   const token = getAccessToken()
   if (!token) return
 
+  errorMsg.value = ''
+
   const [productos, posts, reservas] = await Promise.allSettled([
     apiFetchAuth<ProductosRes>('/catalogo/productos/?page_size=1', token),
     apiFetchAuth<PostAdmin[]>('/blog/admin/posts/', token),
     apiFetchAuth<ReservaAdmin[]>('/agenda/admin/reservas/', token),
   ])
+
+  const resultados = [productos, posts, reservas]
+  const sinPermiso = resultados.some(r => r.status === 'rejected' && r.reason instanceof ApiError && r.reason.status === 403)
+  if (sinPermiso) {
+    errorMsg.value = 'Tu usuario no tiene permisos de administrador para ver estos datos.'
+  } else if (resultados.every(r => r.status === 'rejected')) {
+    errorMsg.value = 'No se pudo cargar la información del panel.'
+  }
 
   if (productos.status === 'fulfilled') {
     const res = productos.value
@@ -52,6 +64,8 @@ onMounted(cargar)
       <p class="text-[10px] tracking-[0.35em] uppercase text-[#f5d984]/70 mb-1">Panel</p>
       <h2 class="text-2xl font-black uppercase tracking-tight" style="font-family:'Playfair Display',serif;">Dashboard</h2>
     </div>
+
+    <div v-if="errorMsg" class="mb-5 border border-red-500/30 bg-red-500/10 px-4 py-3 text-[11px] text-red-200">{{ errorMsg }}</div>
 
     <!-- KPIs -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">

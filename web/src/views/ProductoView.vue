@@ -34,6 +34,13 @@ type ProductoListApi = {
   marca: { id: number; nombre: string; slug: string } | null
 }
 
+type PaginatedResponse<T> = {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
 type ProductoVm = {
   id: number
   slug: string
@@ -114,10 +121,10 @@ async function cargarProducto(slug: string) {
     ])
 
     if (producto.value.categoriaSlug) {
-      const rel = await apiFetch<ProductoListApi[]>(
+      const rel = await apiFetch<PaginatedResponse<ProductoListApi>>(
         `/catalogo/productos/?categoria=${encodeURIComponent(producto.value.categoriaSlug)}`,
       )
-      relacionados.value = rel
+      relacionados.value = rel.results
         .map(mapProductoList)
         .filter(p => p.id !== producto.value?.id)
         .slice(0, 4)
