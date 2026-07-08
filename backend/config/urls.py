@@ -40,6 +40,9 @@ urlpatterns = [
         serve, {'document_root': str(DIST)},
     ),
 
-    # SPA catch-all — debe ir al final
-    re_path(r'^.*$', vue_app),
+    # SPA catch-all — debe ir al final. Excluye api/ y django-admin/ para que
+    # una ruta de esos prefijos que no matchea nada devuelva 404 real en vez
+    # de servir el HTML de la SPA (lo que confundía a los smoke tests y podía
+    # esconder errores 404 legítimos del frontend).
+    re_path(r'^(?!api/|django-admin/).*$', vue_app),
 ]
