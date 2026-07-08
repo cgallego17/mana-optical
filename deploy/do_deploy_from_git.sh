@@ -77,6 +77,11 @@ if [[ -f "$BACKEND_ENV" ]]; then
   cp -f "$BACKEND_ENV" "$ENV_BACKUP"
 fi
 
+# Detener gunicorn antes de tocar el directorio del backend: si un worker
+# se reinicia (timeout, falta de RAM) justo mientras rm -rf/cp -R lo dejan
+# vacío o a medio copiar, revienta con ImportError al re-importar el código.
+systemctl stop mana-backend 2>/dev/null || true
+
 # Sync backend + deploy files
 echo "Syncing backend..."
 rm -rf "$BACKEND_TARGET"

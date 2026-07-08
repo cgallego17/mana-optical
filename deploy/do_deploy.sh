@@ -52,9 +52,14 @@ nginx -t
 systemctl reload nginx
 
 # systemd service
+# "enable --now" NO reinicia un servicio que ya está activo, así que un
+# gunicorn corriendo desde antes seguiría sirviendo código viejo para
+# siempre. Se reinicia explícitamente para garantizar que siempre quede
+# corriendo el código recién desplegado.
 cp -f "$SCRIPT_DIR/mana-backend.service" /etc/systemd/system/mana-backend.service
 systemctl daemon-reload
-systemctl enable --now mana-backend
+systemctl enable mana-backend
+systemctl restart mana-backend
 
 # Acceso rápido: permite correr "sudo mana-update" desde cualquier directorio
 # en vez de tener que cd al checkout del repo primero.
