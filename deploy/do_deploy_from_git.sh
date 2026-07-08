@@ -10,6 +10,8 @@ BACKEND_TARGET="$BASE_DIR/backend"
 WEB_TARGET="$BASE_DIR/web"
 BACKEND_ENV="$BACKEND_TARGET/.env"
 ENV_BACKUP="$BASE_DIR/.env.backend.bak"
+BACKEND_DB="$BACKEND_TARGET/db.sqlite3"
+DB_BACKUP="$BASE_DIR/db.sqlite3.bak"
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run as root (sudo)" >&2
@@ -72,9 +74,15 @@ echo "Building frontend..."
   fi
 )
 
-# Preserve backend env between deploys (backend folder is replaced)
+# Preserve backend env + base de datos entre deploys (backend folder is
+# replaced). db.sqlite3 está en .gitignore, así que NUNCA existe dentro del
+# checkout del repo: sin este backup/restore, cada "rm -rf backend" borraba
+# la base de datos de producción entera y "migrate" la recreaba vacía.
 if [[ -f "$BACKEND_ENV" ]]; then
   cp -f "$BACKEND_ENV" "$ENV_BACKUP"
+fi
+if [[ -f "$BACKEND_DB" ]]; then
+  cp -f "$BACKEND_DB" "$DB_BACKUP"
 fi
 
 # Detener gunicorn antes de tocar el directorio del backend: si un worker
@@ -89,6 +97,9 @@ cp -R "$REPO_DIR/backend" "$BACKEND_TARGET"
 
 if [[ -f "$ENV_BACKUP" && ! -f "$BACKEND_ENV" ]]; then
   cp -f "$ENV_BACKUP" "$BACKEND_ENV"
+fi
+if [[ -f "$DB_BACKUP" && ! -f "$BACKEND_DB" ]]; then
+  cp -f "$DB_BACKUP" "$BACKEND_DB"
 fi
 
 echo "Syncing web dist..."
