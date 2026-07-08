@@ -28,12 +28,13 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   })
 
   if (!res.ok) {
-    let detail = ''
+    const raw = await res.text()
+    let detail = raw
     try {
-      const data = await res.json()
+      const data = JSON.parse(raw)
       detail = (data?.detail as string) || JSON.stringify(data)
     } catch {
-      detail = await res.text()
+      // raw no era JSON (ej. página de error HTML) — se usa tal cual.
     }
     throw new ApiError(detail || `HTTP ${res.status}`, res.status)
   }
