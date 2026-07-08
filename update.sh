@@ -29,7 +29,12 @@
 #   cd web && npm run build   # para que Django sirva el build actualizado en :8000
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# readlink -f resuelve el symlink /usr/local/bin/mana-update hasta el
+# archivo real; sin esto, dirname calculaba /usr/local/bin como ROOT_DIR
+# (la carpeta del symlink, no la del script apuntado) y fallaba buscando
+# /usr/local/bin/deploy/do_deploy_from_git.sh.
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
 if [[ "${OS:-}" == "Windows_NT" ]]; then
   echo "update.sh es para el servidor de producción Linux (Nginx + Gunicorn)." >&2
