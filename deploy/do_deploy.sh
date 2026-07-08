@@ -8,6 +8,7 @@ BASE_DIR="/var/www/mana"
 BACKEND_DIR="$BASE_DIR/backend"
 WEB_DIST_DIR="$BASE_DIR/web/dist"
 VENV_DIR="$BACKEND_DIR/.venv"
+REPO_UPDATE_SCRIPT="$BASE_DIR/repo/update.sh"
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run as root (sudo)" >&2
@@ -54,6 +55,13 @@ systemctl reload nginx
 cp -f "$SCRIPT_DIR/mana-backend.service" /etc/systemd/system/mana-backend.service
 systemctl daemon-reload
 systemctl enable --now mana-backend
+
+# Acceso rápido: permite correr "sudo mana-update" desde cualquier directorio
+# en vez de tener que cd al checkout del repo primero.
+if [[ -f "$REPO_UPDATE_SCRIPT" ]]; then
+  chmod +x "$REPO_UPDATE_SCRIPT"
+  ln -sf "$REPO_UPDATE_SCRIPT" /usr/local/bin/mana-update
+fi
 
 echo "\nRunning smoke test..."
 bash "$SCRIPT_DIR/do_smoke_test.sh"

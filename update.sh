@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # Punto de entrada para actualizar el servidor de PRODUCCIÓN (droplet con
-# Nginx + Gunicorn). Se ejecuta en el servidor, como root, parado dentro del
-# checkout del repo (por convención /var/www/mana/repo):
+# Nginx + Gunicorn). Se resuelve por ruta absoluta, así que se puede invocar
+# desde cualquier directorio sin hacer cd primero:
 #
-#   cd /var/www/mana/repo && sudo bash update.sh
+#   sudo bash /var/www/mana/repo/update.sh
+#
+# Después del primer deploy, do_deploy.sh deja un atajo instalado en el PATH
+# (/usr/local/bin/mana-update), así que desde la segunda vez basta con:
+#
+#   sudo mana-update
 #
 # Hace todo el trabajo delegando en el pipeline ya existente en deploy/, para
 # no duplicar esa lógica:
