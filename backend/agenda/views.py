@@ -62,17 +62,20 @@ class DisponibilidadView(APIView):
             except (Servicio.DoesNotExist, ValueError):
                 return Response({'detail': 'Servicio no existe.'}, status=400)
 
-        if servicio and servicio.hora_inicio and servicio.hora_fin:
-            # El servicio tiene horario propio: es independiente del horario
-            # semanal y de las excepciones de fecha del negocio.
+        if servicio:
+            if not servicio.vigente_en(fecha):
+                return Response({'fecha': fecha_str, 'slots': []})
             if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
                 return Response({'fecha': fecha_str, 'slots': []})
-            hora_inicio, hora_fin = servicio.hora_inicio, servicio.hora_fin
-        else:
+
+        hora_inicio = hora_fin = None
+        if servicio:
+            hora_inicio, hora_fin = servicio.horario_para_dia(fecha.weekday())
+
+        if hora_inicio is None or hora_fin is None:
+            # Sin horario propio ese día: usa el horario/excepción global.
             abierto, hora_inicio, hora_fin = HorarioAtencion.resolver_fecha(fecha)
             if not abierto:
-                return Response({'fecha': fecha_str, 'slots': []})
-            if servicio and servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
                 return Response({'fecha': fecha_str, 'slots': []})
 
         slots = build_slots(hora_inicio, hora_fin, 30)

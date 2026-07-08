@@ -3,44 +3,62 @@ import { ref, onMounted } from 'vue'
 import { Plus, Pencil, Trash2, Check, X } from 'lucide-vue-next'
 import { apiFetch, apiFetchAuth } from '../../lib/api'
 import { useAuth } from '../../composables/auth'
+import ServicioHorarioEditor from './ServicioHorarioEditor.vue'
 
 const { getAccessToken } = useAuth()
 
+type HorarioDia = { inicio: string; fin: string }
 type Servicio = {
   id: number; nombre: string; slug: string; duracion_minutos: number
-  dias_disponibles: number[]; hora_inicio: string | null; hora_fin: string | null
+  dias_disponibles: number[]; horarios_dias: Record<string, HorarioDia>
+  vigencia_desde: string | null; vigencia_hasta: string | null
+}
+type ServicioForm = {
+  nombre: string; slug: string; duracion_minutos: number
+  dias_disponibles: number[]; horarios_dias: Record<string, HorarioDia>
+  vigencia_desde: string; vigencia_hasta: string
 }
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+function formVacio(): ServicioForm {
+  return { nombre: '', slug: '', duracion_minutos: 30, dias_disponibles: [], horarios_dias: {}, vigencia_desde: '', vigencia_hasta: '' }
+}
 
 const cargando  = ref(false)
 const errorMsg  = ref('')
 const items     = ref<Servicio[]>([])
 const editId    = ref<number | null>(null)
-const editForm  = ref({ nombre: '', slug: '', duracion_minutos: 30, dias_disponibles: [] as number[], hora_inicio: '', hora_fin: '' })
-const newForm   = ref({ nombre: '', slug: '', duracion_minutos: 30, dias_disponibles: [] as number[], hora_inicio: '', hora_fin: '' })
+const editForm  = ref<ServicioForm>(formVacio())
+const newForm   = ref<ServicioForm>(formVacio())
 const guardando = ref(false)
 const creando   = ref(false)
 
-function alternarDia(dias: number[], d: number) {
-  const i = dias.indexOf(d)
-  if (i === -1) dias.push(d)
-  else dias.splice(i, 1)
+function resumenDias(s: Servicio): string {
+  const tieneRestriccion = s.dias_disponibles.length > 0
+  const dias = tieneRestriccion ? [...s.dias_disponibles].sort() : [0, 1, 2, 3, 4, 5, 6]
+  const horarios = s.horarios_dias ?? {}
+  if (!tieneRestriccion && !Object.keys(horarios).length) return 'Todos los días · horario general'
+  return dias.map(d => {
+    const h = horarios[String(d)]
+    return h ? `${DIAS[d]} ${h.inicio}–${h.fin}` : DIAS[d]
+  }).join(' · ')
 }
 
-function textoDias(dias: number[]): string {
-  if (!dias.length) return 'Todos los días'
-  return [...dias].sort().map(d => DIAS[d]).join(', ')
+function resumenVigencia(s: Servicio): string {
+  if (!s.vigencia_desde && !s.vigencia_hasta) return ''
+  return `Vigente: ${s.vigencia_desde ?? '…'} → ${s.vigencia_hasta ?? '…'}`
 }
 
-function textoHoras(s: Servicio): string {
-  return s.hora_inicio && s.hora_fin ? `${s.hora_inicio}–${s.hora_fin}` : 'Horario general'
-}
-
-function payloadHoras(form: { hora_inicio: string; hora_fin: string }) {
+function payloadHorario(form: ServicioForm) {
+  const horarios_dias: Record<string, HorarioDia> = {}
+  for (const [dia, h] of Object.entries(form.horarios_dias)) {
+    if (h.inicio && h.fin) horarios_dias[dia] = { inicio: h.inicio, fin: h.fin }
+  }
   return {
-    hora_inicio: form.hora_inicio || null,
-    hora_fin: form.hora_fin || null,
+    horarios_dias,
+    vigencia_desde: form.vigencia_desde || null,
+    vigencia_hasta: form.vigencia_hasta || null,
   }
 }
 
@@ -56,7 +74,8 @@ function iniciarEditar(s: Servicio) {
   editForm.value = {
     nombre: s.nombre, slug: s.slug, duracion_minutos: s.duracion_minutos,
     dias_disponibles: [...(s.dias_disponibles ?? [])],
-    hora_inicio: s.hora_inicio ?? '', hora_fin: s.hora_fin ?? '',
+    horarios_dias: Object.fromEntries(Object.entries(s.horarios_dias ?? {}).map(([k, v]) => [k, { ...v }])),
+    vigencia_desde: s.vigencia_desde ?? '', vigencia_hasta: s.vigencia_hasta ?? '',
   }
 }
 function cancelarEditar() { editId.value = null }
@@ -65,7 +84,7 @@ async function guardarEditar(s: Servicio) {
   const token = getAccessToken(); if (!token) return
   guardando.value = true; errorMsg.value = ''
   try {
-    const body = { ...editForm.value, ...payloadHoras(editForm.value) }
+    const body = { ...editForm.value, ...payloadHorario(editForm.value) }
     const u = await apiFetchAuth<Servicio>(`/agenda/admin/servicios/${s.id}/`, token, { method: 'PATCH', body: JSON.stringify(body) })
     items.value = items.value.map(x => x.id === u.id ? u : x)
     editId.value = null
@@ -88,10 +107,10 @@ async function crear() {
   if (!newForm.value.nombre.trim()) return
   creando.value = true; errorMsg.value = ''
   try {
-    const body = { ...newForm.value, ...payloadHoras(newForm.value) }
+    const body = { ...newForm.value, ...payloadHorario(newForm.value) }
     const s = await apiFetchAuth<Servicio>('/agenda/admin/servicios/', token, { method: 'POST', body: JSON.stringify(body) })
     items.value = [...items.value, s]
-    newForm.value = { nombre: '', slug: '', duracion_minutos: 30, dias_disponibles: [], hora_inicio: '', hora_fin: '' }
+    newForm.value = formVacio()
   } catch (e) { errorMsg.value = e instanceof Error ? e.message : 'Error' }
   finally { creando.value = false }
 }
@@ -104,7 +123,7 @@ onMounted(cargar)
     <div class="mb-8">
       <p class="text-[10px] tracking-[0.35em] uppercase text-[#f5d984]/70 mb-1">Agenda</p>
       <h2 class="text-2xl font-black uppercase tracking-tight" style="font-family:'Playfair Display',serif;">Servicios</h2>
-      <p class="text-white/40 text-[12px] mt-1">Si no defines un horario propio, el servicio usa el horario general de la óptica.</p>
+      <p class="text-white/40 text-[12px] mt-1">Cada día puede tener su propio horario. Si lo dejas vacío, usa el horario general de la óptica.</p>
     </div>
 
     <div v-if="errorMsg" class="mb-4 border border-red-500/30 bg-red-500/10 px-4 py-3 text-[11px] text-red-200">{{ errorMsg }}</div>
@@ -112,14 +131,13 @@ onMounted(cargar)
 
     <div v-else class="bg-white/5 border border-white/[0.07] rounded mb-8 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[820px]">
+        <table class="w-full text-sm min-w-[760px]">
           <thead>
             <tr class="border-b border-white/[0.07]">
               <th class="admin-th">Nombre</th>
               <th class="admin-th">Slug</th>
               <th class="admin-th">Duración</th>
-              <th class="admin-th w-[220px]">Días</th>
-              <th class="admin-th">Horario</th>
+              <th class="admin-th">Programación</th>
               <th class="admin-th w-20"></th>
             </tr>
           </thead>
@@ -138,25 +156,11 @@ onMounted(cargar)
                 <span v-else class="text-white/60 text-[12px] whitespace-nowrap">{{ s.duracion_minutos }} min</span>
               </td>
               <td class="px-4 py-4 align-top">
-                <div v-if="editId === s.id" class="flex gap-1.5 flex-wrap max-w-[200px]">
-                  <button
-                    v-for="(d, idx) in DIAS" :key="idx" type="button"
-                    @click="alternarDia(editForm.dias_disponibles, idx)"
-                    class="w-8 h-7 text-[10px] font-bold rounded border transition-colors"
-                    :class="editForm.dias_disponibles.includes(idx)
-                      ? 'bg-[#f5d984] text-[#314037] border-[#f5d984]'
-                      : 'border-white/15 text-white/40 hover:border-white/30'"
-                  >{{ d }}</button>
+                <ServicioHorarioEditor v-if="editId === s.id" :form="editForm" class="min-w-[360px]" />
+                <div v-else class="text-[11px] text-white/40 space-y-1 max-w-sm">
+                  <div>{{ resumenDias(s) }}</div>
+                  <div v-if="resumenVigencia(s)" class="text-[#f5d984]/70">{{ resumenVigencia(s) }}</div>
                 </div>
-                <span v-else class="text-white/40 text-[11px]">{{ textoDias(s.dias_disponibles) }}</span>
-              </td>
-              <td class="px-4 py-4 align-top">
-                <div v-if="editId === s.id" class="flex items-center gap-1.5">
-                  <input v-model="editForm.hora_inicio" type="time" class="admin-input w-24" />
-                  <span class="text-white/30">–</span>
-                  <input v-model="editForm.hora_fin" type="time" class="admin-input w-24" />
-                </div>
-                <span v-else class="text-white/40 text-[11px] whitespace-nowrap">{{ textoHoras(s) }}</span>
               </td>
               <td class="px-4 py-4 align-top">
                 <div class="flex items-center gap-1">
@@ -172,7 +176,7 @@ onMounted(cargar)
               </td>
             </tr>
             <tr v-if="!items.length">
-              <td colspan="6" class="px-4 py-8 text-center text-[11px] text-white/30">Sin servicios.</td>
+              <td colspan="5" class="px-4 py-8 text-center text-[11px] text-white/30">Sin servicios.</td>
             </tr>
           </tbody>
         </table>
@@ -197,28 +201,8 @@ onMounted(cargar)
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-        <div>
-          <label class="admin-label">Días disponibles</label>
-          <div class="flex gap-1.5 flex-wrap">
-            <button
-              v-for="(d, idx) in DIAS" :key="idx" type="button"
-              @click="alternarDia(newForm.dias_disponibles, idx)"
-              class="w-9 h-9 text-[10px] font-bold rounded border transition-colors"
-              :class="newForm.dias_disponibles.includes(idx)
-                ? 'bg-[#f5d984] text-[#314037] border-[#f5d984]'
-                : 'border-white/15 text-white/40 hover:border-white/30'"
-            >{{ d }}</button>
-          </div>
-        </div>
-        <div>
-          <label class="admin-label">Horario propio (opcional)</label>
-          <div class="flex items-center gap-2">
-            <input v-model="newForm.hora_inicio" type="time" class="admin-input w-28" />
-            <span class="text-white/30">–</span>
-            <input v-model="newForm.hora_fin" type="time" class="admin-input w-28" />
-          </div>
-        </div>
+      <div class="mt-5 pt-5 border-t border-white/[0.07]">
+        <ServicioHorarioEditor :form="newForm" />
       </div>
 
       <div class="flex justify-end mt-6 pt-5 border-t border-white/[0.07]">

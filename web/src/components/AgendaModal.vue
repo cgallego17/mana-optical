@@ -20,8 +20,9 @@ type ServicioApi = {
   slug: string
   duracion_minutos: number
   dias_disponibles: number[]
-  hora_inicio: string | null
-  hora_fin: string | null
+  horarios_dias: Record<string, { inicio: string; fin: string }>
+  vigencia_desde: string | null
+  vigencia_hasta: string | null
 }
 
 type SlotApi = {
@@ -114,23 +115,25 @@ function esDiaValido(d: Date | null): boolean {
 
   const diaPy = (d.getDay() + 6) % 7 // 0=Lunes … 6=Domingo
   const servicio = servicioActual.value
-  const diasServicio = servicio?.dias_disponibles ?? []
-  const tieneHorarioPropio = !!(servicio?.hora_inicio && servicio?.hora_fin)
+  const isoFecha = formatIsoDate(d)
 
-  if (tieneHorarioPropio) {
-    // El servicio tiene horario propio: independiente del horario semanal
-    // y de las excepciones de fecha del negocio.
+  if (servicio) {
+    if (servicio.vigencia_desde && isoFecha < servicio.vigencia_desde) return false
+    if (servicio.vigencia_hasta && isoFecha > servicio.vigencia_hasta) return false
+    const diasServicio = servicio.dias_disponibles ?? []
     if (diasServicio.length && !diasServicio.includes(diaPy)) return false
-  } else {
-    // Excepción de calendario (festivo/cierre o apertura extra) tiene prioridad
-    const excepcion = excepcionDeFecha(formatIsoDate(d))
+  }
+
+  const tieneHorarioPropio = !!servicio?.horarios_dias?.[String(diaPy)]
+  if (!tieneHorarioPropio) {
+    // Sin horario propio ese día: depende del horario/excepción global del negocio.
+    const excepcion = excepcionDeFecha(isoFecha)
     if (excepcion) {
       if (!excepcion.abierto) return false
     } else {
       const horario = horarioDelDia(diaPy)
       if (horario && !horario.abierto) return false
     }
-    if (!excepcion && diasServicio.length && !diasServicio.includes(diaPy)) return false
   }
 
   // Solo 30 días adelante
@@ -175,6 +178,11 @@ const waLink = computed(() => {
   )
   return `https://wa.me/573005262309?text=${msg}`
 })
+
+function formatFechaIso(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${d} de ${nombreMeses[m - 1]} de ${y}`
+}
 
 function formatIsoDate(d: Date): string {
   const y = d.getFullYear()
@@ -400,6 +408,10 @@ watch(servicioSeleccionado, () => {
               {{ (servicioActual?.dias_disponibles?.length ?? 0) > 0
                 ? `Disponible: ${servicioActual!.dias_disponibles.map(d => nombreDias[(d + 1) % 7]).join(', ')}`
                 : diasAbiertosTexto }}
+            </p>
+            <p v-if="servicioActual?.vigencia_desde || servicioActual?.vigencia_hasta" class="text-[10px] text-black/35 mt-1">
+              {{ servicioActual?.vigencia_desde ? `Desde el ${formatFechaIso(servicioActual.vigencia_desde)}` : '' }}
+              {{ servicioActual?.vigencia_hasta ? `Hasta el ${formatFechaIso(servicioActual.vigencia_hasta)}` : '' }}
             </p>
           </div>
 

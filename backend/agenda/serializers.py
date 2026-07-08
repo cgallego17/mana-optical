@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 
 from rest_framework import serializers
 
@@ -16,8 +16,9 @@ class ServicioSerializer(serializers.ModelSerializer):
             'slug',
             'duracion_minutos',
             'dias_disponibles',
-            'hora_inicio',
-            'hora_fin',
+            'horarios_dias',
+            'vigencia_desde',
+            'vigencia_hasta',
         )
 
 
@@ -26,7 +27,7 @@ class ServicioAdminSerializer(serializers.ModelSerializer):
         model = Servicio
         fields = (
             'id', 'nombre', 'slug', 'duracion_minutos', 'activo',
-            'dias_disponibles', 'hora_inicio', 'hora_fin',
+            'dias_disponibles', 'horarios_dias', 'vigencia_desde', 'vigencia_hasta',
         )
 
     def validate_dias_disponibles(self, value):
@@ -38,16 +39,47 @@ class ServicioAdminSerializer(serializers.ModelSerializer):
             )
         return sorted(set(value))
 
-    def validate(self, attrs):
-        inicio = attrs.get('hora_inicio', getattr(self.instance, 'hora_inicio', None))
-        fin = attrs.get('hora_fin', getattr(self.instance, 'hora_fin', None))
-        if bool(inicio) != bool(fin):
+    def validate_horarios_dias(self, value):
+        if not isinstance(value, dict):
             raise serializers.ValidationError(
-                'Debes indicar hora de inicio y fin, o dejar ambas vacías.',
+                'Debe ser un objeto con horario por día.',
             )
-        if inicio and fin and inicio >= fin:
+        limpio = {}
+        for dia, rango in value.items():
+            try:
+                dia_int = int(dia)
+            except (TypeError, ValueError):
+                raise serializers.ValidationError(
+                    'Cada clave debe ser un día (0=Lunes … 6=Domingo).',
+                )
+            if not 0 <= dia_int <= 6:
+                raise serializers.ValidationError(
+                    'Cada clave debe ser un día (0=Lunes … 6=Domingo).',
+                )
+            if not isinstance(rango, dict) or 'inicio' not in rango or 'fin' not in rango:
+                raise serializers.ValidationError(
+                    'Cada día debe traer "inicio" y "fin".',
+                )
+            try:
+                inicio = time.fromisoformat(rango['inicio'])
+                fin = time.fromisoformat(rango['fin'])
+            except (TypeError, ValueError):
+                raise serializers.ValidationError(
+                    f'Horario inválido para el día {dia_int}.',
+                )
+            if inicio >= fin:
+                raise serializers.ValidationError(
+                    f'La hora de fin debe ser posterior a la de inicio (día {dia_int}).',
+                )
+            limpio[str(dia_int)] = {'inicio': rango['inicio'], 'fin': rango['fin']}
+        return limpio
+
+    def validate(self, attrs):
+        desde = attrs.get('vigencia_desde', getattr(self.instance, 'vigencia_desde', None))
+        hasta = attrs.get('vigencia_hasta', getattr(self.instance, 'vigencia_hasta', None))
+        if desde and hasta and desde > hasta:
             raise serializers.ValidationError(
-                {'hora_fin': 'La hora de fin debe ser posterior a la de inicio.'},
+                {'vigencia_hasta': 'La fecha de fin de vigencia debe ser posterior a la de inicio.'},
             )
         return attrs
 
@@ -182,21 +214,25 @@ class ReservaCreateSerializer(serializers.ModelSerializer):
 
         fecha = attrs.get('fecha')
         servicio = attrs.get('servicio')
-        if fecha and servicio and servicio.hora_inicio and servicio.hora_fin:
-            # Horario propio del servicio: independiente del horario semanal
-            # y de las excepciones de fecha del negocio.
+        if fecha and servicio:
+            if not servicio.vigente_en(fecha):
+                raise serializers.ValidationError(
+                    {'fecha': 'El servicio no está vigente en esa fecha.'},
+                )
             if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
                 raise serializers.ValidationError(
                     {'fecha': 'El servicio no está disponible ese día.'},
                 )
+            hora_propia, _ = servicio.horario_para_dia(fecha.weekday())
+            if hora_propia is None:
+                # Sin horario propio ese día: depende del horario/excepción global.
+                abierto, _, _ = HorarioAtencion.resolver_fecha(fecha)
+                if not abierto:
+                    raise serializers.ValidationError({'fecha': 'No hay atención ese día.'})
         elif fecha:
             abierto, _, _ = HorarioAtencion.resolver_fecha(fecha)
             if not abierto:
                 raise serializers.ValidationError({'fecha': 'No hay atención ese día.'})
-            if servicio and servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
-                raise serializers.ValidationError(
-                    {'fecha': 'El servicio no está disponible ese día.'},
-                )
 
         hora = attrs.get('hora')
         if fecha and hora:

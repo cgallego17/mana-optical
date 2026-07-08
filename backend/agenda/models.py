@@ -83,12 +83,31 @@ class Servicio(models.Model):
     # Días de la semana en que se ofrece el servicio (0=Lunes ... 6=Domingo).
     # Lista vacía significa "todos los días" (sujeto a las reglas globales de atención).
     dias_disponibles = models.JSONField(default=list, blank=True)
-    # Horario propio del servicio; si es null se usa el horario/excepción global del día.
-    hora_inicio = models.TimeField(null=True, blank=True)
-    hora_fin = models.TimeField(null=True, blank=True)
+    # Horario propio por día: {"0": {"inicio": "09:00", "fin": "13:00"}, ...}.
+    # Un día sin entrada aquí usa el horario/excepción global de ese día.
+    horarios_dias = models.JSONField(default=dict, blank=True)
+    # Rango de fechas en que el servicio puede reservarse (ambas opcionales;
+    # vacías = sin límite de vigencia).
+    vigencia_desde = models.DateField(null=True, blank=True)
+    vigencia_hasta = models.DateField(null=True, blank=True)
 
     def __str__(self) -> str:
         return self.nombre
+
+    def horario_para_dia(self, weekday: int):
+        """Devuelve (hora_inicio, hora_fin) propios del servicio para ese día
+        de la semana, o (None, None) si ese día no tiene horario propio."""
+        entry = (self.horarios_dias or {}).get(str(weekday))
+        if not entry:
+            return None, None
+        return time.fromisoformat(entry['inicio']), time.fromisoformat(entry['fin'])
+
+    def vigente_en(self, fecha) -> bool:
+        if self.vigencia_desde and fecha < self.vigencia_desde:
+            return False
+        if self.vigencia_hasta and fecha > self.vigencia_hasta:
+            return False
+        return True
 
 
 class Reserva(models.Model):
