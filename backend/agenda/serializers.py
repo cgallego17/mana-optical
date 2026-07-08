@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from clientes.models import Cliente
 
-from .models import HorarioAtencion, Reserva, Servicio
+from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio
 
 
 class ServicioSerializer(serializers.ModelSerializer):
@@ -50,6 +50,30 @@ class HorarioAtencionSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class DiaExcepcionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiaExcepcion
+        fields = ('id', 'fecha', 'abierto', 'hora_inicio', 'hora_fin', 'motivo')
+
+    def validate(self, attrs):
+        abierto = attrs.get('abierto', getattr(self.instance, 'abierto', False))
+        inicio = attrs.get('hora_inicio', getattr(self.instance, 'hora_inicio', None))
+        fin = attrs.get('hora_fin', getattr(self.instance, 'hora_fin', None))
+        if abierto:
+            if not inicio or not fin:
+                raise serializers.ValidationError(
+                    'Debes indicar hora de inicio y fin para una apertura especial.',
+                )
+            if inicio >= fin:
+                raise serializers.ValidationError(
+                    {'hora_fin': 'La hora de fin debe ser posterior a la de inicio.'},
+                )
+        else:
+            attrs['hora_inicio'] = None
+            attrs['hora_fin'] = None
+        return attrs
+
+
 class ReservaAdminSerializer(serializers.ModelSerializer):
     servicio_nombre = serializers.CharField(source='servicio.nombre', read_only=True)
     cliente_nombre = serializers.CharField(source='cliente.nombre', read_only=True)
@@ -72,6 +96,22 @@ class ReservaAdminSerializer(serializers.ModelSerializer):
             'creado_en',
         )
         read_only_fields = ('creado_en',)
+
+    def validate(self, attrs):
+        fecha = attrs.get('fecha', getattr(self.instance, 'fecha', None))
+        hora = attrs.get('hora', getattr(self.instance, 'hora', None))
+        estado = attrs.get('estado', getattr(self.instance, 'estado', Reserva.Estado.PENDIENTE))
+        if fecha and hora and estado != Reserva.Estado.CANCELADA:
+            qs = Reserva.objects.filter(fecha=fecha, hora=hora).exclude(
+                estado=Reserva.Estado.CANCELADA,
+            )
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {'hora': 'Ese horario ya está reservado.'},
+                )
+        return attrs
 
 
 class ReservaCreateSerializer(serializers.ModelSerializer):
@@ -96,8 +136,8 @@ class ReservaCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'La fecha no puede ser en el pasado.',
             )
-        horario = HorarioAtencion.get_for_weekday(value.weekday())
-        if not horario.abierto:
+        abierto, _, _ = HorarioAtencion.resolver_fecha(value)
+        if not abierto:
             raise serializers.ValidationError('No hay atención ese día.')
         return value
 

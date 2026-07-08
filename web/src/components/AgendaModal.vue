@@ -34,8 +34,17 @@ type HorarioApi = {
   hora_fin: string
 }
 
+type ExcepcionApi = {
+  fecha: string
+  abierto: boolean
+  hora_inicio: string | null
+  hora_fin: string | null
+  motivo: string
+}
+
 const servicios = ref<ServicioApi[]>([])
 const horarios = ref<HorarioApi[]>([])
+const excepciones = ref<ExcepcionApi[]>([])
 const slots = ref<SlotApi[]>([])
 const cargandoServicios = ref(false)
 const cargandoSlots = ref(false)
@@ -50,8 +59,20 @@ async function cargarHorarios() {
   }
 }
 
+async function cargarExcepciones() {
+  try {
+    excepciones.value = await apiFetch<ExcepcionApi[]>('/agenda/excepciones/')
+  } catch {
+    excepciones.value = []
+  }
+}
+
 function horarioDelDia(diaPy: number): HorarioApi | undefined {
   return horarios.value.find(h => h.dia_semana === diaPy)
+}
+
+function excepcionDeFecha(iso: string): ExcepcionApi | undefined {
+  return excepciones.value.find(e => e.fecha === iso)
 }
 
 const diasAbiertosTexto = computed(() => {
@@ -88,13 +109,19 @@ const diasDelMes = computed(() => {
 function esDiaValido(d: Date | null): boolean {
   if (!d) return false
   if (d < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) return false
-  const diaPy = (d.getDay() + 6) % 7 // 0=Lunes … 6=Domingo
-  // Horario global de atención
-  const horario = horarioDelDia(diaPy)
-  if (horario && !horario.abierto) return false
+  // Excepción de calendario (festivo/cierre o apertura extra) tiene prioridad
+  const excepcion = excepcionDeFecha(formatIsoDate(d))
+  if (excepcion) {
+    if (!excepcion.abierto) return false
+  } else {
+    const diaPy = (d.getDay() + 6) % 7 // 0=Lunes … 6=Domingo
+    const horario = horarioDelDia(diaPy)
+    if (horario && !horario.abierto) return false
+  }
   // Restricción de días propia del servicio
+  const diaPy = (d.getDay() + 6) % 7
   const diasServicio = servicioActual.value?.dias_disponibles ?? []
-  if (diasServicio.length && !diasServicio.includes(diaPy)) return false
+  if (!excepcion && diasServicio.length && !diasServicio.includes(diaPy)) return false
   // Solo 30 días adelante
   const limite = new Date(hoy); limite.setDate(hoy.getDate() + 30)
   return d <= limite
@@ -224,6 +251,7 @@ watch(isOpen, (val) => {
   if (val) {
     cargarServicios()
     cargarHorarios()
+    cargarExcepciones()
   } else {
     setTimeout(reset, 300)
   }

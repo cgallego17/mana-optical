@@ -1,12 +1,19 @@
 from django.contrib import admin
 
-from .models import HorarioAtencion, Reserva, Servicio
+from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio
 
 
 @admin.register(HorarioAtencion)
 class HorarioAtencionAdmin(admin.ModelAdmin):
     list_display = ('dia_semana', 'abierto', 'hora_inicio', 'hora_fin')
     list_editable = ('abierto', 'hora_inicio', 'hora_fin')
+
+
+@admin.register(DiaExcepcion)
+class DiaExcepcionAdmin(admin.ModelAdmin):
+    list_display = ('fecha', 'abierto', 'hora_inicio', 'hora_fin', 'motivo')
+    list_filter = ('abierto',)
+    date_hierarchy = 'fecha'
 
 
 @admin.register(Servicio)

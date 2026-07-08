@@ -6,8 +6,9 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import HorarioAtencion, Reserva, Servicio
+from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio
 from .serializers import (
+    DiaExcepcionSerializer,
     HorarioAtencionSerializer,
     ReservaAdminSerializer,
     ReservaCreateSerializer,
@@ -53,8 +54,8 @@ class DisponibilidadView(APIView):
         if fecha < localdate():
             return Response({'fecha': fecha_str, 'slots': []})
 
-        horario = HorarioAtencion.get_for_weekday(fecha.weekday())
-        if not horario.abierto:
+        abierto, hora_inicio, hora_fin = HorarioAtencion.resolver_fecha(fecha)
+        if not abierto:
             return Response({'fecha': fecha_str, 'slots': []})
 
         servicio_id = request.query_params.get('servicio')
@@ -66,7 +67,7 @@ class DisponibilidadView(APIView):
             if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
                 return Response({'fecha': fecha_str, 'slots': []})
 
-        slots = build_slots(horario.hora_inicio, horario.hora_fin, 30)
+        slots = build_slots(hora_inicio, hora_fin, 30)
 
         reserved = set(
             Reserva.objects.filter(fecha=fecha)
@@ -101,7 +102,27 @@ class ServicioListView(generics.ListAPIView):
         return Servicio.objects.filter(activo=True).order_by('nombre')
 
 
-class AdminReservaListView(generics.ListAPIView):
+class ExcepcionListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = DiaExcepcionSerializer
+
+    def get_queryset(self):
+        return DiaExcepcion.objects.filter(fecha__gte=localdate())
+
+
+class AdminExcepcionListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = DiaExcepcionSerializer
+    queryset = DiaExcepcion.objects.all()
+
+
+class AdminExcepcionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = DiaExcepcionSerializer
+    queryset = DiaExcepcion.objects.all()
+
+
+class AdminReservaListView(generics.ListCreateAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = ReservaAdminSerializer
 

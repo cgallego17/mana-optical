@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Check, X, RefreshCw } from 'lucide-vue-next'
-import { apiFetchAuth } from '../../lib/api'
+import { Check, X, RefreshCw, Plus } from 'lucide-vue-next'
+import { apiFetchAuth, unwrapResults, ApiError } from '../../lib/api'
 import { useAuth } from '../../composables/auth'
 
 const { getAccessToken } = useAuth()
@@ -17,11 +17,73 @@ type Reserva = {
   creada_en?: string
 }
 
+type ServicioApi = { id: number; nombre: string }
+
 const cargando  = ref(false)
 const errorMsg  = ref('')
 const reservas  = ref<Reserva[]>([])
 const filtro    = ref<'todas' | 'pendiente' | 'confirmada' | 'cancelada'>('todas')
 const actualizando = ref<number | null>(null)
+
+// Nueva cita manual (creada directamente por el admin)
+const servicios = ref<ServicioApi[]>([])
+const mostrarForm = ref(false)
+const creando = ref(false)
+const errorForm = ref('')
+const nueva = ref({
+  servicio: '' as number | '',
+  fecha: '',
+  hora: '',
+  nombre: '',
+  telefono: '',
+  email: '',
+  notas: '',
+  estado: 'confirmada' as Reserva['estado'],
+})
+
+async function cargarServicios() {
+  const token = getAccessToken(); if (!token) return
+  try {
+    const data = await apiFetchAuth<ServicioApi[] | { results: ServicioApi[] }>('/agenda/admin/servicios/', token)
+    servicios.value = unwrapResults<ServicioApi>(data)
+  } catch { servicios.value = [] }
+}
+
+function abrirForm() {
+  errorForm.value = ''
+  nueva.value = { servicio: '', fecha: '', hora: '', nombre: '', telefono: '', email: '', notas: '', estado: 'confirmada' }
+  mostrarForm.value = true
+}
+
+async function crearCita() {
+  const token = getAccessToken(); if (!token) return
+  errorForm.value = ''
+  if (!nueva.value.fecha || !nueva.value.hora || !nueva.value.nombre.trim() || !nueva.value.telefono.trim()) {
+    errorForm.value = 'Fecha, hora, nombre y teléfono son obligatorios.'
+    return
+  }
+  creando.value = true
+  try {
+    const body: Record<string, unknown> = {
+      fecha: nueva.value.fecha,
+      hora: nueva.value.hora,
+      nombre: nueva.value.nombre.trim(),
+      telefono: nueva.value.telefono.trim(),
+      email: nueva.value.email.trim(),
+      notas: nueva.value.notas.trim(),
+      estado: nueva.value.estado,
+    }
+    if (nueva.value.servicio) body.servicio = nueva.value.servicio
+    const creada = await apiFetchAuth<Reserva>('/agenda/admin/reservas/', token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+    reservas.value = [creada, ...reservas.value]
+    mostrarForm.value = false
+  } catch (e) {
+    errorForm.value = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : 'Error creando la cita')
+  } finally { creando.value = false }
+}
 
 const reservasFiltradas = computed(() =>
   filtro.value === 'todas' ? reservas.value : reservas.value.filter(r => r.estado === filtro.value)
@@ -68,7 +130,7 @@ const filtros: { value: typeof filtro.value; label: string }[] = [
   { value: 'cancelada', label: 'Canceladas' },
 ]
 
-onMounted(cargar)
+onMounted(() => { cargar(); cargarServicios() })
 </script>
 
 <template>
@@ -78,10 +140,16 @@ onMounted(cargar)
         <p class="text-[10px] tracking-[0.35em] uppercase text-[#f5d984]/70 mb-1">Agenda</p>
         <h2 class="text-2xl font-black uppercase tracking-tight" style="font-family:'Playfair Display',serif;">Reservas</h2>
       </div>
-      <button @click="cargar" :disabled="cargando"
-        class="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase border border-white/20 px-4 py-2 hover:border-white/50 transition disabled:opacity-40">
-        <RefreshCw class="h-3.5 w-3.5" :class="cargando ? 'animate-spin' : ''" /> Actualizar
-      </button>
+      <div class="flex items-center gap-3">
+        <button @click="abrirForm"
+          class="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase bg-[#f5d984] text-[#314037] px-4 py-2 rounded hover:opacity-90 transition">
+          <Plus class="h-3.5 w-3.5" /> Nueva cita
+        </button>
+        <button @click="cargar" :disabled="cargando"
+          class="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase border border-white/20 px-4 py-2 hover:border-white/50 transition disabled:opacity-40">
+          <RefreshCw class="h-3.5 w-3.5" :class="cargando ? 'animate-spin' : ''" /> Actualizar
+        </button>
+      </div>
     </div>
 
     <!-- Filtros de estado -->
@@ -153,10 +221,74 @@ onMounted(cargar)
         </table>
       </div>
     </div>
+
+    <!-- Modal: nueva cita manual -->
+    <div v-if="mostrarForm" class="fixed inset-0 z-[95] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60" @click="mostrarForm = false" />
+      <div class="relative bg-[#1a231f] border border-white/10 w-full max-w-md p-6 rounded shadow-2xl">
+        <h3 class="text-base font-black uppercase tracking-wide mb-5">Nueva cita</h3>
+
+        <div v-if="errorForm" class="mb-4 border border-red-500/30 bg-red-500/10 px-4 py-3 text-[11px] text-red-200">{{ errorForm }}</div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Servicio</label>
+            <select v-model="nueva.servicio" class="admin-input">
+              <option value="">Sin especificar</option>
+              <option v-for="s in servicios" :key="s.id" :value="s.id">{{ s.nombre }}</option>
+            </select>
+          </div>
+          <div class="flex gap-3">
+            <div class="flex-1">
+              <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Fecha *</label>
+              <input v-model="nueva.fecha" type="date" class="admin-input" />
+            </div>
+            <div class="flex-1">
+              <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Hora *</label>
+              <input v-model="nueva.hora" type="time" class="admin-input" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Nombre *</label>
+            <input v-model="nueva.nombre" type="text" class="admin-input" placeholder="Nombre del cliente" />
+          </div>
+          <div class="flex gap-3">
+            <div class="flex-1">
+              <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Teléfono *</label>
+              <input v-model="nueva.telefono" type="tel" class="admin-input" placeholder="300 000 0000" />
+            </div>
+            <div class="flex-1">
+              <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Email</label>
+              <input v-model="nueva.email" type="email" class="admin-input" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Estado</label>
+            <select v-model="nueva.estado" class="admin-input">
+              <option value="confirmada">Confirmada</option>
+              <option value="pendiente">Pendiente</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-black tracking-widest uppercase text-white/40 mb-1.5">Notas</label>
+            <textarea v-model="nueva.notas" rows="2" class="admin-input resize-none" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 mt-6">
+          <button @click="mostrarForm = false" class="text-[11px] font-bold tracking-widest uppercase text-white/50 hover:text-white px-4 py-2.5 transition">Cancelar</button>
+          <button @click="crearCita" :disabled="creando"
+            class="text-[11px] font-bold tracking-widest uppercase bg-[#f5d984] text-[#314037] px-5 py-2.5 rounded disabled:opacity-40">
+            {{ creando ? 'Creando…' : 'Crear cita' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 @reference "../../style.css";
 .admin-th { @apply px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase text-white/30 }
+.admin-input { @apply w-full px-3 py-2 bg-black/30 border border-white/10 outline-none focus:border-[#f5d984] text-sm text-white rounded }
 </style>

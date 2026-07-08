@@ -41,6 +41,39 @@ class HorarioAtencion(models.Model):
             cls(dia_semana=d, abierto=d != 6) for d in faltantes
         ])
 
+    @classmethod
+    def resolver_fecha(cls, fecha):
+        """Devuelve (abierto, hora_inicio, hora_fin) para una fecha puntual.
+        Da prioridad a una excepción de calendario sobre el horario semanal."""
+        excepcion = DiaExcepcion.objects.filter(fecha=fecha).first()
+        if excepcion:
+            if not excepcion.abierto:
+                return False, None, None
+            return True, excepcion.hora_inicio, excepcion.hora_fin
+        horario = cls.get_for_weekday(fecha.weekday())
+        if not horario.abierto:
+            return False, None, None
+        return True, horario.hora_inicio, horario.hora_fin
+
+
+class DiaExcepcion(models.Model):
+    """Excepción de calendario que anula el horario semanal en una fecha
+    concreta: festivos/cierres (abierto=False) o aperturas extra (abierto=True)."""
+    fecha = models.DateField(unique=True)
+    abierto = models.BooleanField(default=False)
+    hora_inicio = models.TimeField(null=True, blank=True)
+    hora_fin = models.TimeField(null=True, blank=True)
+    motivo = models.CharField(max_length=140, blank=True)
+
+    class Meta:
+        ordering = ['fecha']
+
+    def __str__(self) -> str:
+        estado = (
+            f"{self.hora_inicio}-{self.hora_fin}" if self.abierto else 'cerrado'
+        )
+        return f"{self.fecha} ({estado})"
+
 
 class Servicio(models.Model):
     nombre = models.CharField(max_length=120)
@@ -89,9 +122,15 @@ class Reserva(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = (
-            ('fecha', 'hora'),
-        )
+        constraints = [
+            # Un mismo horario solo se bloquea mientras la reserva siga activa;
+            # si se cancela, el turno vuelve a quedar libre para reagendar.
+            models.UniqueConstraint(
+                fields=['fecha', 'hora'],
+                condition=~models.Q(estado='cancelada'),
+                name='reserva_activa_unica_por_fecha_hora',
+            ),
+        ]
         indexes = [
             models.Index(fields=['fecha', 'hora']),
         ]
