@@ -12,6 +12,8 @@ BACKEND_ENV="$BACKEND_TARGET/.env"
 ENV_BACKUP="$BASE_DIR/.env.backend.bak"
 BACKEND_DB="$BACKEND_TARGET/db.sqlite3"
 DB_BACKUP="$BASE_DIR/db.sqlite3.bak"
+DB_BACKUP_DIR="$BASE_DIR/backups"
+DB_BACKUP_KEEP=30
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run as root (sudo)" >&2
@@ -83,6 +85,13 @@ if [[ -f "$BACKEND_ENV" ]]; then
 fi
 if [[ -f "$BACKEND_DB" ]]; then
   cp -f "$BACKEND_DB" "$DB_BACKUP"
+
+  # Segunda capa de seguridad: snapshot con fecha, independiente del backup
+  # de arriba, para poder recuperar un estado previo aunque algo más falle.
+  mkdir -p "$DB_BACKUP_DIR"
+  cp -f "$BACKEND_DB" "$DB_BACKUP_DIR/db-$(date +%Y%m%d-%H%M%S).sqlite3"
+  # Conserva solo los últimos $DB_BACKUP_KEEP snapshots.
+  ls -1t "$DB_BACKUP_DIR"/db-*.sqlite3 2>/dev/null | tail -n +$((DB_BACKUP_KEEP + 1)) | xargs -r rm -f
 fi
 
 # Detener gunicorn antes de tocar el directorio del backend: si un worker
@@ -100,6 +109,15 @@ if [[ -f "$ENV_BACKUP" && ! -f "$BACKEND_ENV" ]]; then
 fi
 if [[ -f "$DB_BACKUP" && ! -f "$BACKEND_DB" ]]; then
   cp -f "$DB_BACKUP" "$BACKEND_DB"
+fi
+
+# Si había una base de datos antes de este deploy, tiene que seguir
+# existiendo ahora. Si no, algo salió mal restaurándola: abortar aquí,
+# ANTES de correr migrate, en vez de dejar que cree una vacía en silencio.
+if [[ -f "$DB_BACKUP" && ! -s "$BACKEND_DB" ]]; then
+  echo "ERROR: db.sqlite3 no se pudo restaurar tras el deploy (o quedó vacía)." >&2
+  echo "Hay un backup en $DB_BACKUP y snapshots en $DB_BACKUP_DIR — restaura manualmente antes de reintentar." >&2
+  exit 1
 fi
 
 echo "Syncing web dist..."
