@@ -154,9 +154,6 @@ class ReservaCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'La fecha no puede ser en el pasado.',
             )
-        abierto, _, _ = HorarioAtencion.resolver_fecha(value)
-        if not abierto:
-            raise serializers.ValidationError('No hay atención ese día.')
         return value
 
     def validate(self, attrs):
@@ -185,10 +182,21 @@ class ReservaCreateSerializer(serializers.ModelSerializer):
 
         fecha = attrs.get('fecha')
         servicio = attrs.get('servicio')
-        if fecha and servicio and servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
-            raise serializers.ValidationError(
-                {'fecha': 'El servicio no está disponible ese día.'},
-            )
+        if fecha and servicio and servicio.hora_inicio and servicio.hora_fin:
+            # Horario propio del servicio: independiente del horario semanal
+            # y de las excepciones de fecha del negocio.
+            if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
+                raise serializers.ValidationError(
+                    {'fecha': 'El servicio no está disponible ese día.'},
+                )
+        elif fecha:
+            abierto, _, _ = HorarioAtencion.resolver_fecha(fecha)
+            if not abierto:
+                raise serializers.ValidationError({'fecha': 'No hay atención ese día.'})
+            if servicio and servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
+                raise serializers.ValidationError(
+                    {'fecha': 'El servicio no está disponible ese día.'},
+                )
 
         hora = attrs.get('hora')
         if fecha and hora:

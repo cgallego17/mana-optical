@@ -100,7 +100,7 @@ onMounted(cargar)
 </script>
 
 <template>
-  <div class="p-6 lg:p-10 max-w-4xl">
+  <div class="p-6 lg:p-10 max-w-5xl">
     <div class="mb-8">
       <p class="text-[10px] tracking-[0.35em] uppercase text-[#f5d984]/70 mb-1">Agenda</p>
       <h2 class="text-2xl font-black uppercase tracking-tight" style="font-family:'Playfair Display',serif;">Servicios</h2>
@@ -110,95 +110,101 @@ onMounted(cargar)
     <div v-if="errorMsg" class="mb-4 border border-red-500/30 bg-red-500/10 px-4 py-3 text-[11px] text-red-200">{{ errorMsg }}</div>
     <div v-if="cargando" class="py-10 text-center text-[11px] text-white/40">Cargando…</div>
 
-    <div v-else class="bg-white/5 border border-white/[0.07] rounded mb-6 overflow-hidden">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-white/[0.07]">
-            <th class="admin-th">Nombre</th>
-            <th class="admin-th">Slug</th>
-            <th class="admin-th">Duración</th>
-            <th class="admin-th">Días</th>
-            <th class="admin-th">Horario</th>
-            <th class="admin-th w-20"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-white/[0.05]">
-          <tr v-for="s in items" :key="s.id" class="hover:bg-white/[0.03] transition-colors">
-            <td class="px-4 py-3">
-              <input v-if="editId === s.id" v-model="editForm.nombre" class="admin-input" />
-              <span v-else class="font-semibold">{{ s.nombre }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <input v-if="editId === s.id" v-model="editForm.slug" class="admin-input" />
-              <span v-else class="text-white/40 text-[12px]">/{{ s.slug }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <input v-if="editId === s.id" v-model.number="editForm.duracion_minutos" type="number" min="5" step="5" class="admin-input w-20" />
-              <span v-else class="text-white/60 text-[12px]">{{ s.duracion_minutos }} min</span>
-            </td>
-            <td class="px-4 py-3">
-              <div v-if="editId === s.id" class="flex gap-1 flex-wrap max-w-[180px]">
-                <button
-                  v-for="(d, idx) in DIAS" :key="idx" type="button"
-                  @click="alternarDia(editForm.dias_disponibles, idx)"
-                  class="w-8 h-7 text-[10px] font-bold rounded border transition-colors"
-                  :class="editForm.dias_disponibles.includes(idx)
-                    ? 'bg-[#f5d984] text-[#314037] border-[#f5d984]'
-                    : 'border-white/15 text-white/40 hover:border-white/30'"
-                >{{ d }}</button>
-              </div>
-              <span v-else class="text-white/40 text-[11px]">{{ textoDias(s.dias_disponibles) }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <div v-if="editId === s.id" class="flex items-center gap-1.5">
-                <input v-model="editForm.hora_inicio" type="time" class="admin-input w-24" />
-                <span class="text-white/30">–</span>
-                <input v-model="editForm.hora_fin" type="time" class="admin-input w-24" />
-              </div>
-              <span v-else class="text-white/40 text-[11px]">{{ textoHoras(s) }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-1">
-                <template v-if="editId === s.id">
-                  <button @click="guardarEditar(s)" :disabled="guardando" class="p-1.5 text-[#f5d984] hover:bg-white/10 rounded"><Check class="h-3.5 w-3.5" /></button>
-                  <button @click="cancelarEditar" class="p-1.5 text-white/40 hover:bg-white/10 rounded"><X class="h-3.5 w-3.5" /></button>
-                </template>
-                <template v-else>
-                  <button @click="iniciarEditar(s)" class="p-1.5 text-white/40 hover:text-[#f5d984] transition"><Pencil class="h-3.5 w-3.5" /></button>
-                  <button @click="eliminar(s)" class="p-1.5 text-white/40 hover:text-red-300 transition"><Trash2 class="h-3.5 w-3.5" /></button>
-                </template>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="!items.length">
-            <td colspan="6" class="px-4 py-8 text-center text-[11px] text-white/30">Sin servicios.</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else class="bg-white/5 border border-white/[0.07] rounded mb-8 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[820px]">
+          <thead>
+            <tr class="border-b border-white/[0.07]">
+              <th class="admin-th">Nombre</th>
+              <th class="admin-th">Slug</th>
+              <th class="admin-th">Duración</th>
+              <th class="admin-th w-[220px]">Días</th>
+              <th class="admin-th">Horario</th>
+              <th class="admin-th w-20"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/[0.05]">
+            <tr v-for="s in items" :key="s.id" class="hover:bg-white/[0.03] transition-colors">
+              <td class="px-4 py-4 align-top">
+                <input v-if="editId === s.id" v-model="editForm.nombre" class="admin-input" />
+                <span v-else class="font-semibold">{{ s.nombre }}</span>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <input v-if="editId === s.id" v-model="editForm.slug" class="admin-input" />
+                <span v-else class="text-white/40 text-[12px]">/{{ s.slug }}</span>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <input v-if="editId === s.id" v-model.number="editForm.duracion_minutos" type="number" min="5" step="5" class="admin-input w-20" />
+                <span v-else class="text-white/60 text-[12px] whitespace-nowrap">{{ s.duracion_minutos }} min</span>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <div v-if="editId === s.id" class="flex gap-1.5 flex-wrap max-w-[200px]">
+                  <button
+                    v-for="(d, idx) in DIAS" :key="idx" type="button"
+                    @click="alternarDia(editForm.dias_disponibles, idx)"
+                    class="w-8 h-7 text-[10px] font-bold rounded border transition-colors"
+                    :class="editForm.dias_disponibles.includes(idx)
+                      ? 'bg-[#f5d984] text-[#314037] border-[#f5d984]'
+                      : 'border-white/15 text-white/40 hover:border-white/30'"
+                  >{{ d }}</button>
+                </div>
+                <span v-else class="text-white/40 text-[11px]">{{ textoDias(s.dias_disponibles) }}</span>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <div v-if="editId === s.id" class="flex items-center gap-1.5">
+                  <input v-model="editForm.hora_inicio" type="time" class="admin-input w-24" />
+                  <span class="text-white/30">–</span>
+                  <input v-model="editForm.hora_fin" type="time" class="admin-input w-24" />
+                </div>
+                <span v-else class="text-white/40 text-[11px] whitespace-nowrap">{{ textoHoras(s) }}</span>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <div class="flex items-center gap-1">
+                  <template v-if="editId === s.id">
+                    <button @click="guardarEditar(s)" :disabled="guardando" class="p-1.5 text-[#f5d984] hover:bg-white/10 rounded"><Check class="h-3.5 w-3.5" /></button>
+                    <button @click="cancelarEditar" class="p-1.5 text-white/40 hover:bg-white/10 rounded"><X class="h-3.5 w-3.5" /></button>
+                  </template>
+                  <template v-else>
+                    <button @click="iniciarEditar(s)" class="p-1.5 text-white/40 hover:text-[#f5d984] transition"><Pencil class="h-3.5 w-3.5" /></button>
+                    <button @click="eliminar(s)" class="p-1.5 text-white/40 hover:text-red-300 transition"><Trash2 class="h-3.5 w-3.5" /></button>
+                  </template>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!items.length">
+              <td colspan="6" class="px-4 py-8 text-center text-[11px] text-white/30">Sin servicios.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="bg-white/5 border border-white/[0.07] rounded p-5">
-      <p class="text-[10px] font-black tracking-widest uppercase text-white/40 mb-4">Nuevo servicio</p>
-      <div class="flex gap-3 flex-wrap">
-        <div class="flex-1 min-w-[140px]">
+    <div class="bg-white/5 border border-white/[0.07] rounded p-6">
+      <p class="text-[10px] font-black tracking-widest uppercase text-white/40 mb-5">Nuevo servicio</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
           <label class="admin-label">Nombre *</label>
           <input v-model="newForm.nombre" type="text" class="admin-input" placeholder="Examen Visual" />
         </div>
-        <div class="flex-1 min-w-[120px]">
+        <div>
           <label class="admin-label">Slug</label>
           <input v-model="newForm.slug" type="text" class="admin-input" placeholder="examen-visual" />
         </div>
-        <div class="w-28">
+        <div>
           <label class="admin-label">Duración (min)</label>
           <input v-model.number="newForm.duracion_minutos" type="number" min="5" step="5" class="admin-input" />
         </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
         <div>
           <label class="admin-label">Días disponibles</label>
-          <div class="flex gap-1">
+          <div class="flex gap-1.5 flex-wrap">
             <button
               v-for="(d, idx) in DIAS" :key="idx" type="button"
               @click="alternarDia(newForm.dias_disponibles, idx)"
-              class="w-8 h-8 text-[10px] font-bold rounded border transition-colors"
+              class="w-9 h-9 text-[10px] font-bold rounded border transition-colors"
               :class="newForm.dias_disponibles.includes(idx)
                 ? 'bg-[#f5d984] text-[#314037] border-[#f5d984]'
                 : 'border-white/15 text-white/40 hover:border-white/30'"
@@ -207,18 +213,19 @@ onMounted(cargar)
         </div>
         <div>
           <label class="admin-label">Horario propio (opcional)</label>
-          <div class="flex items-center gap-1.5">
-            <input v-model="newForm.hora_inicio" type="time" class="admin-input w-24" />
+          <div class="flex items-center gap-2">
+            <input v-model="newForm.hora_inicio" type="time" class="admin-input w-28" />
             <span class="text-white/30">–</span>
-            <input v-model="newForm.hora_fin" type="time" class="admin-input w-24" />
+            <input v-model="newForm.hora_fin" type="time" class="admin-input w-28" />
           </div>
         </div>
-        <div class="flex items-end">
-          <button @click="crear" :disabled="creando || !newForm.nombre.trim()"
-            class="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase bg-[#f5d984] text-[#314037] px-4 py-2.5 hover:opacity-90 transition disabled:opacity-40">
-            <Plus class="h-4 w-4" /> Crear
-          </button>
-        </div>
+      </div>
+
+      <div class="flex justify-end mt-6 pt-5 border-t border-white/[0.07]">
+        <button @click="crear" :disabled="creando || !newForm.nombre.trim()"
+          class="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase bg-[#f5d984] text-[#314037] px-5 py-2.5 hover:opacity-90 transition disabled:opacity-40">
+          <Plus class="h-4 w-4" /> Crear
+        </button>
       </div>
     </div>
   </div>
