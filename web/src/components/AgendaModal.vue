@@ -45,9 +45,18 @@ type ExcepcionApi = {
   motivo: string
 }
 
+type ServicioExcepcionApi = {
+  fecha: string
+  abierto: boolean
+  hora_inicio: string | null
+  hora_fin: string | null
+  motivo: string
+}
+
 const servicios = ref<ServicioApi[]>([])
 const horarios = ref<HorarioApi[]>([])
 const excepciones = ref<ExcepcionApi[]>([])
+const servicioExcepciones = ref<ServicioExcepcionApi[]>([])
 const slots = ref<SlotApi[]>([])
 const cargandoServicios = ref(false)
 const cargandoSlots = ref(false)
@@ -70,12 +79,24 @@ async function cargarExcepciones() {
   }
 }
 
+async function cargarServicioExcepciones(servicioId: number) {
+  try {
+    servicioExcepciones.value = await apiFetch<ServicioExcepcionApi[]>(`/agenda/servicios/excepciones/?servicio=${servicioId}`)
+  } catch {
+    servicioExcepciones.value = []
+  }
+}
+
 function horarioDelDia(diaPy: number): HorarioApi | undefined {
   return horarios.value.find(h => h.dia_semana === diaPy)
 }
 
 function excepcionDeFecha(iso: string): ExcepcionApi | undefined {
   return excepciones.value.find(e => e.fecha === iso)
+}
+
+function servicioExcepcionDeFecha(iso: string): ServicioExcepcionApi | undefined {
+  return servicioExcepciones.value.find(e => e.fecha === iso)
 }
 
 const diasAbiertosTexto = computed(() => {
@@ -113,11 +134,19 @@ function esDiaValido(d: Date | null): boolean {
   if (!d) return false
   if (d < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) return false
 
+  // Solo 30 días adelante
+  const limite = new Date(hoy); limite.setDate(hoy.getDate() + 30)
+  if (d > limite) return false
+
   const diaPy = (d.getDay() + 6) % 7 // 0=Lunes … 6=Domingo
   const servicio = servicioActual.value
   const isoFecha = formatIsoDate(d)
 
   if (servicio) {
+    // Fecha especial propia del servicio: máxima prioridad (festivo o apertura extra).
+    const especial = servicioExcepcionDeFecha(isoFecha)
+    if (especial) return especial.abierto
+
     if (servicio.vigencia_desde && isoFecha < servicio.vigencia_desde) return false
     if (servicio.vigencia_hasta && isoFecha > servicio.vigencia_hasta) return false
     const diasServicio = servicio.dias_disponibles ?? []
@@ -136,9 +165,7 @@ function esDiaValido(d: Date | null): boolean {
     }
   }
 
-  // Solo 30 días adelante
-  const limite = new Date(hoy); limite.setDate(hoy.getDate() + 30)
-  return d <= limite
+  return true
 }
 
 function esDiaSeleccionado(d: Date | null): boolean {
@@ -258,6 +285,7 @@ function reset() {
   telefono.value = ''
   mesActual.value = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
   servicios.value = []
+  servicioExcepciones.value = []
   slots.value = []
   cargandoServicios.value = false
   cargandoSlots.value = false
@@ -282,7 +310,9 @@ watch(fechaSeleccionada, async (val) => {
   await cargarSlots()
 })
 
-watch(servicioSeleccionado, () => {
+watch(servicioSeleccionado, async (val) => {
+  servicioExcepciones.value = []
+  if (val) await cargarServicioExcepciones(val)
   if (fechaSeleccionada.value && !esDiaValido(fechaSeleccionada.value)) {
     fechaSeleccionada.value = null
     horaSeleccionada.value = ''

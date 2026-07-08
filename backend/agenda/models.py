@@ -109,6 +109,59 @@ class Servicio(models.Model):
             return False
         return True
 
+    def resolver_fecha(self, fecha):
+        """Devuelve (abierto, hora_inicio, hora_fin) para este servicio en una
+        fecha concreta. Orden de prioridad:
+        1. Fecha especial propia del servicio (festivo o apertura extra).
+        2. Vigencia y días de la semana configurados para el servicio.
+        3. Horario propio del servicio para ese día de la semana.
+        4. Horario/excepción general de la óptica (fallback)."""
+        especial = self.excepciones.filter(fecha=fecha).first()
+        if especial:
+            if not especial.abierto:
+                return False, None, None
+            if especial.hora_inicio and especial.hora_fin:
+                return True, especial.hora_inicio, especial.hora_fin
+            _, hora_inicio, hora_fin = HorarioAtencion.resolver_fecha(fecha)
+            return True, hora_inicio, hora_fin
+
+        if not self.vigente_en(fecha):
+            return False, None, None
+        if self.dias_disponibles and fecha.weekday() not in self.dias_disponibles:
+            return False, None, None
+
+        hora_inicio, hora_fin = self.horario_para_dia(fecha.weekday())
+        if hora_inicio and hora_fin:
+            return True, hora_inicio, hora_fin
+
+        return HorarioAtencion.resolver_fecha(fecha)
+
+
+class ServicioExcepcion(models.Model):
+    """Excepción de calendario propia de un servicio: lo cierra en una fecha
+    puntual (festivo, ausencia del especialista) o le habilita una apertura /
+    horario especial ese día, con prioridad sobre su horario semanal y su
+    vigencia."""
+    servicio = models.ForeignKey(Servicio, on_delete=models.CASCADE, related_name='excepciones')
+    fecha = models.DateField()
+    abierto = models.BooleanField(default=False)
+    hora_inicio = models.TimeField(null=True, blank=True)
+    hora_fin = models.TimeField(null=True, blank=True)
+    motivo = models.CharField(max_length=140, blank=True)
+
+    class Meta:
+        ordering = ['fecha']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['servicio', 'fecha'],
+                name='servicio_excepcion_unica_por_fecha',
+            ),
+        ]
+
+    def __str__(self) -> str:
+        estado = f"{self.hora_inicio}-{self.hora_fin}" if self.abierto else 'cerrado'
+        return f"{self.servicio} · {self.fecha} ({estado})"
+
 
 class Reserva(models.Model):
     class Estado(models.TextChoices):

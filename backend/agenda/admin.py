@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio
+from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio, ServicioExcepcion
 
 
 @admin.register(HorarioAtencion)
@@ -22,6 +22,13 @@ class ServicioAdmin(admin.ModelAdmin):
     list_filter = ('activo',)
     search_fields = ('nombre', 'slug')
     prepopulated_fields = {'slug': ('nombre',)}
+
+
+@admin.register(ServicioExcepcion)
+class ServicioExcepcionAdmin(admin.ModelAdmin):
+    list_display = ('servicio', 'fecha', 'abierto', 'hora_inicio', 'hora_fin', 'motivo')
+    list_filter = ('abierto', 'servicio')
+    date_hierarchy = 'fecha'
 
 
 @admin.register(Reserva)

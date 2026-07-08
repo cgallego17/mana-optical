@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from clientes.models import Cliente
 
-from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio
+from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio, ServicioExcepcion
 
 
 class ServicioSerializer(serializers.ModelSerializer):
@@ -81,6 +81,35 @@ class ServicioAdminSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'vigencia_hasta': 'La fecha de fin de vigencia debe ser posterior a la de inicio.'},
             )
+        return attrs
+
+
+class ServicioExcepcionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServicioExcepcion
+        fields = ('id', 'servicio', 'fecha', 'abierto', 'hora_inicio', 'hora_fin', 'motivo')
+
+    def validate(self, attrs):
+        abierto = attrs.get('abierto', getattr(self.instance, 'abierto', False))
+        inicio = attrs.get('hora_inicio', getattr(self.instance, 'hora_inicio', None))
+        fin = attrs.get('hora_fin', getattr(self.instance, 'hora_fin', None))
+        if abierto and inicio and fin and inicio >= fin:
+            raise serializers.ValidationError(
+                {'hora_fin': 'La hora de fin debe ser posterior a la de inicio.'},
+            )
+        if not abierto:
+            attrs['hora_inicio'] = None
+            attrs['hora_fin'] = None
+        servicio = attrs.get('servicio', getattr(self.instance, 'servicio', None))
+        fecha = attrs.get('fecha', getattr(self.instance, 'fecha', None))
+        if servicio and fecha:
+            qs = ServicioExcepcion.objects.filter(servicio=servicio, fecha=fecha)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {'fecha': 'Ya existe una fecha especial para este servicio en ese día.'},
+                )
         return attrs
 
 
@@ -214,27 +243,19 @@ class ReservaCreateSerializer(serializers.ModelSerializer):
 
         fecha = attrs.get('fecha')
         servicio = attrs.get('servicio')
-        if fecha and servicio:
-            if not servicio.vigente_en(fecha):
-                raise serializers.ValidationError(
-                    {'fecha': 'El servicio no está vigente en esa fecha.'},
-                )
-            if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
-                raise serializers.ValidationError(
-                    {'fecha': 'El servicio no está disponible ese día.'},
-                )
-            hora_propia, _ = servicio.horario_para_dia(fecha.weekday())
-            if hora_propia is None:
-                # Sin horario propio ese día: depende del horario/excepción global.
-                abierto, _, _ = HorarioAtencion.resolver_fecha(fecha)
-                if not abierto:
-                    raise serializers.ValidationError({'fecha': 'No hay atención ese día.'})
-        elif fecha:
-            abierto, _, _ = HorarioAtencion.resolver_fecha(fecha)
+        hora = attrs.get('hora')
+        if fecha:
+            if servicio:
+                abierto, hora_inicio, hora_fin = servicio.resolver_fecha(fecha)
+            else:
+                abierto, hora_inicio, hora_fin = HorarioAtencion.resolver_fecha(fecha)
             if not abierto:
                 raise serializers.ValidationError({'fecha': 'No hay atención ese día.'})
+            if hora and hora_inicio and hora_fin and not (hora_inicio <= hora <= hora_fin):
+                raise serializers.ValidationError(
+                    {'hora': 'Esa hora está fuera del horario disponible ese día.'},
+                )
 
-        hora = attrs.get('hora')
         if fecha and hora:
             exists = Reserva.objects.filter(
                 fecha=fecha,

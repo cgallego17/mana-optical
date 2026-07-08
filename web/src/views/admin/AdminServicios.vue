@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, Check, X } from 'lucide-vue-next'
 import { apiFetch, apiFetchAuth } from '../../lib/api'
 import { useAuth } from '../../composables/auth'
 import ServicioHorarioEditor from './ServicioHorarioEditor.vue'
+import ServicioExcepcionesEditor from './ServicioExcepcionesEditor.vue'
 
 const { getAccessToken } = useAuth()
 
@@ -142,39 +143,46 @@ onMounted(cargar)
             </tr>
           </thead>
           <tbody class="divide-y divide-white/[0.05]">
-            <tr v-for="s in items" :key="s.id" class="hover:bg-white/[0.03] transition-colors">
-              <td class="px-4 py-4 align-top">
-                <input v-if="editId === s.id" v-model="editForm.nombre" class="admin-input" />
-                <span v-else class="font-semibold">{{ s.nombre }}</span>
-              </td>
-              <td class="px-4 py-4 align-top">
-                <input v-if="editId === s.id" v-model="editForm.slug" class="admin-input" />
-                <span v-else class="text-white/40 text-[12px]">/{{ s.slug }}</span>
-              </td>
-              <td class="px-4 py-4 align-top">
-                <input v-if="editId === s.id" v-model.number="editForm.duracion_minutos" type="number" min="5" step="5" class="admin-input w-20" />
-                <span v-else class="text-white/60 text-[12px] whitespace-nowrap">{{ s.duracion_minutos }} min</span>
-              </td>
-              <td class="px-4 py-4 align-top">
-                <ServicioHorarioEditor v-if="editId === s.id" :form="editForm" class="min-w-[360px]" />
-                <div v-else class="text-[11px] text-white/40 space-y-1 max-w-sm">
-                  <div>{{ resumenDias(s) }}</div>
-                  <div v-if="resumenVigencia(s)" class="text-[#f5d984]/70">{{ resumenVigencia(s) }}</div>
-                </div>
-              </td>
-              <td class="px-4 py-4 align-top">
-                <div class="flex items-center gap-1">
-                  <template v-if="editId === s.id">
-                    <button @click="guardarEditar(s)" :disabled="guardando" class="p-1.5 text-[#f5d984] hover:bg-white/10 rounded"><Check class="h-3.5 w-3.5" /></button>
-                    <button @click="cancelarEditar" class="p-1.5 text-white/40 hover:bg-white/10 rounded"><X class="h-3.5 w-3.5" /></button>
-                  </template>
-                  <template v-else>
-                    <button @click="iniciarEditar(s)" class="p-1.5 text-white/40 hover:text-[#f5d984] transition"><Pencil class="h-3.5 w-3.5" /></button>
-                    <button @click="eliminar(s)" class="p-1.5 text-white/40 hover:text-red-300 transition"><Trash2 class="h-3.5 w-3.5" /></button>
-                  </template>
-                </div>
-              </td>
-            </tr>
+            <template v-for="s in items" :key="s.id">
+              <tr class="hover:bg-white/[0.03] transition-colors">
+                <td class="px-4 py-4 align-top">
+                  <input v-if="editId === s.id" v-model="editForm.nombre" class="admin-input" />
+                  <span v-else class="font-semibold">{{ s.nombre }}</span>
+                </td>
+                <td class="px-4 py-4 align-top">
+                  <input v-if="editId === s.id" v-model="editForm.slug" class="admin-input" />
+                  <span v-else class="text-white/40 text-[12px]">/{{ s.slug }}</span>
+                </td>
+                <td class="px-4 py-4 align-top">
+                  <input v-if="editId === s.id" v-model.number="editForm.duracion_minutos" type="number" min="5" step="5" class="admin-input w-20" />
+                  <span v-else class="text-white/60 text-[12px] whitespace-nowrap">{{ s.duracion_minutos }} min</span>
+                </td>
+                <td class="px-4 py-4 align-top">
+                  <ServicioHorarioEditor v-if="editId === s.id" :form="editForm" class="min-w-[360px]" />
+                  <div v-else class="text-[11px] text-white/40 space-y-1 max-w-sm">
+                    <div>{{ resumenDias(s) }}</div>
+                    <div v-if="resumenVigencia(s)" class="text-[#f5d984]/70">{{ resumenVigencia(s) }}</div>
+                  </div>
+                </td>
+                <td class="px-4 py-4 align-top">
+                  <div class="flex items-center gap-1">
+                    <template v-if="editId === s.id">
+                      <button @click="guardarEditar(s)" :disabled="guardando" class="p-1.5 text-[#f5d984] hover:bg-white/10 rounded"><Check class="h-3.5 w-3.5" /></button>
+                      <button @click="cancelarEditar" class="p-1.5 text-white/40 hover:bg-white/10 rounded"><X class="h-3.5 w-3.5" /></button>
+                    </template>
+                    <template v-else>
+                      <button @click="iniciarEditar(s)" class="p-1.5 text-white/40 hover:text-[#f5d984] transition"><Pencil class="h-3.5 w-3.5" /></button>
+                      <button @click="eliminar(s)" class="p-1.5 text-white/40 hover:text-red-300 transition"><Trash2 class="h-3.5 w-3.5" /></button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="editId === s.id">
+                <td colspan="5" class="px-4 pb-5 pt-1 bg-black/10">
+                  <ServicioExcepcionesEditor :servicio-id="s.id" />
+                </td>
+              </tr>
+            </template>
             <tr v-if="!items.length">
               <td colspan="5" class="px-4 py-8 text-center text-[11px] text-white/30">Sin servicios.</td>
             </tr>

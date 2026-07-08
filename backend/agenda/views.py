@@ -6,13 +6,14 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio
+from .models import DiaExcepcion, HorarioAtencion, Reserva, Servicio, ServicioExcepcion
 from .serializers import (
     DiaExcepcionSerializer,
     HorarioAtencionSerializer,
     ReservaAdminSerializer,
     ReservaCreateSerializer,
     ServicioAdminSerializer,
+    ServicioExcepcionSerializer,
     ServicioSerializer,
 )
 
@@ -63,20 +64,11 @@ class DisponibilidadView(APIView):
                 return Response({'detail': 'Servicio no existe.'}, status=400)
 
         if servicio:
-            if not servicio.vigente_en(fecha):
-                return Response({'fecha': fecha_str, 'slots': []})
-            if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
-                return Response({'fecha': fecha_str, 'slots': []})
-
-        hora_inicio = hora_fin = None
-        if servicio:
-            hora_inicio, hora_fin = servicio.horario_para_dia(fecha.weekday())
-
-        if hora_inicio is None or hora_fin is None:
-            # Sin horario propio ese día: usa el horario/excepción global.
+            abierto, hora_inicio, hora_fin = servicio.resolver_fecha(fecha)
+        else:
             abierto, hora_inicio, hora_fin = HorarioAtencion.resolver_fecha(fecha)
-            if not abierto:
-                return Response({'fecha': fecha_str, 'slots': []})
+        if not abierto:
+            return Response({'fecha': fecha_str, 'slots': []})
 
         slots = build_slots(hora_inicio, hora_fin, 30)
 
@@ -157,6 +149,38 @@ class AdminServicioDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = ServicioAdminSerializer
     queryset = Servicio.objects.all()
+
+
+class ServicioExcepcionListView(generics.ListAPIView):
+    """Fechas especiales (futuras) de un servicio puntual, para uso público
+    en el calendario de reserva."""
+    permission_classes = [AllowAny]
+    serializer_class = ServicioExcepcionSerializer
+
+    def get_queryset(self):
+        qs = ServicioExcepcion.objects.filter(fecha__gte=localdate())
+        servicio_id = self.request.query_params.get('servicio')
+        if servicio_id:
+            qs = qs.filter(servicio_id=servicio_id)
+        return qs
+
+
+class AdminServicioExcepcionListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = ServicioExcepcionSerializer
+
+    def get_queryset(self):
+        qs = ServicioExcepcion.objects.all()
+        servicio_id = self.request.query_params.get('servicio')
+        if servicio_id:
+            qs = qs.filter(servicio_id=servicio_id)
+        return qs
+
+
+class AdminServicioExcepcionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = ServicioExcepcionSerializer
+    queryset = ServicioExcepcion.objects.all()
 
 
 class HorarioListView(generics.ListAPIView):
