@@ -16,13 +16,18 @@ class ServicioSerializer(serializers.ModelSerializer):
             'slug',
             'duracion_minutos',
             'dias_disponibles',
+            'hora_inicio',
+            'hora_fin',
         )
 
 
 class ServicioAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Servicio
-        fields = ('id', 'nombre', 'slug', 'duracion_minutos', 'activo', 'dias_disponibles')
+        fields = (
+            'id', 'nombre', 'slug', 'duracion_minutos', 'activo',
+            'dias_disponibles', 'hora_inicio', 'hora_fin',
+        )
 
     def validate_dias_disponibles(self, value):
         if not isinstance(value, list) or not all(
@@ -32,6 +37,19 @@ class ServicioAdminSerializer(serializers.ModelSerializer):
                 'Debe ser una lista de días (0=Lunes … 6=Domingo).',
             )
         return sorted(set(value))
+
+    def validate(self, attrs):
+        inicio = attrs.get('hora_inicio', getattr(self.instance, 'hora_inicio', None))
+        fin = attrs.get('hora_fin', getattr(self.instance, 'hora_fin', None))
+        if bool(inicio) != bool(fin):
+            raise serializers.ValidationError(
+                'Debes indicar hora de inicio y fin, o dejar ambas vacías.',
+            )
+        if inicio and fin and inicio >= fin:
+            raise serializers.ValidationError(
+                {'hora_fin': 'La hora de fin debe ser posterior a la de inicio.'},
+            )
+        return attrs
 
 
 class HorarioAtencionSerializer(serializers.ModelSerializer):

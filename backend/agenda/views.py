@@ -66,6 +66,8 @@ class DisponibilidadView(APIView):
                 return Response({'detail': 'Servicio no existe.'}, status=400)
             if servicio.dias_disponibles and fecha.weekday() not in servicio.dias_disponibles:
                 return Response({'fecha': fecha_str, 'slots': []})
+            if servicio.hora_inicio and servicio.hora_fin:
+                hora_inicio, hora_fin = servicio.hora_inicio, servicio.hora_fin
 
         slots = build_slots(hora_inicio, hora_fin, 30)
 
