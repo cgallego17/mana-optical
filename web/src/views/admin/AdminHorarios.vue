@@ -106,7 +106,7 @@ onMounted(() => { cargar(); cargarExcepciones() })
 </script>
 
 <template>
-  <div class="p-6 lg:p-10 max-w-3xl">
+  <div class="p-6 lg:p-10">
     <div class="mb-8">
       <p class="text-[10px] tracking-[0.35em] uppercase text-[#f5d984]/70 mb-1">Agenda</p>
       <h2 class="text-2xl font-black uppercase tracking-tight" style="font-family:'Playfair Display',serif;">Horarios</h2>
