@@ -49,12 +49,18 @@ mkdir -p "$BASE_DIR"
 if [[ -d "$REPO_DIR/.git" ]]; then
   echo "Updating repo..."
   git config --global --add safe.directory "$REPO_DIR" >/dev/null 2>&1 || true
+  # do_deploy.sh hace chmod +x sobre update.sh dentro de este mismo checkout
+  # para poder exponerlo como /usr/local/bin/mana-update. Sin esto, git ve
+  # ese cambio de permisos como una modificación local y "pull --ff-only"
+  # se niega a avanzar ("local changes would be overwritten by merge").
+  git -C "$REPO_DIR" config core.fileMode false
   git -C "$REPO_DIR" fetch --all
   git -C "$REPO_DIR" checkout "$BRANCH"
   git -C "$REPO_DIR" pull --ff-only
 else
   echo "Cloning repo..."
   git clone --branch "$BRANCH" "$REPO_URL" "$REPO_DIR"
+  git -C "$REPO_DIR" config core.fileMode false
 fi
 
 # Build frontend
